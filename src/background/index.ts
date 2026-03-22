@@ -1,6 +1,6 @@
 import browser from 'webextension-polyfill';
 import { initTracker, setupTabListeners } from './tab-tracker';
-import { startTimer, onAlarmFired } from './timer-manager';
+import { startTimer, onAlarmFired, setupNotificationListener } from './timer-manager';
 import { setupMessageListener } from './messaging';
 import { syncBadge } from './graveyard';
 import { isRestrictedUrl } from '../shared/pure';
@@ -14,6 +14,7 @@ async function init(freshInstall = false): Promise<void> {
   if (!listenersRegistered) {
     setupTabListeners();
     setupMessageListener();
+    setupNotificationListener();
     browser.alarms.onAlarm.addListener(onAlarmFired);
     listenersRegistered = true;
   }

@@ -1,8 +1,8 @@
 import browser from 'webextension-polyfill';
 import type { AgingStage, BgToContentMsg } from '../shared/types';
 import { ALARM_NAME, CHECK_INTERVAL_SECONDS } from '../shared/constants';
-import { computeAgingStage } from '../shared/pure';
-import { getSettings } from '../shared/storage';
+import { computeAgingStage, extractDomain } from '../shared/pure';
+import { getSettings, getGraveyard } from '../shared/storage';
 import {
   ensureLoaded,
   reloadFromStorage,
@@ -13,7 +13,7 @@ import {
   flush,
 } from './tab-tracker';
 import { buildImmunityContext, isImmune } from './immunity';
-import { buryTab } from './graveyard';
+import { buryTab, restoreTab, removeEntry } from './graveyard';
 
 export async function startTimer(): Promise<void> {
   await browser.alarms.clear(ALARM_NAME);
@@ -103,33 +103,30 @@ const NOTIF_PREFIX = 'aging-tabs-closed-';
 function showCloseNotification(tab: browser.Tabs.Tab): void {
   const notifId = NOTIF_PREFIX + Date.now();
   const title = tab.title || 'Untitled';
-  const domain = tab.url ? new URL(tab.url).hostname : '';
+  const domain = extractDomain(tab.url);
 
   browser.notifications.create(notifId, {
     type: 'basic',
-    iconUrl: tab.favIconUrl || browser.runtime.getURL('icons/icon-48.svg'),
+    iconUrl: browser.runtime.getURL('icons/icon-48.svg'),
     title: 'Tab closed',
-    message: `${title}\n${domain}`,
+    message: domain ? `${title} (${domain})` : title,
   }).catch(() => {});
 
-  // Auto-clear after 8 seconds
   setTimeout(() => {
     browser.notifications.clear(notifId).catch(() => {});
   }, 8000);
 }
 
-// Click notification → restore tab
-browser.notifications.onClicked.addListener(async (notifId: string) => {
-  if (!notifId.startsWith(NOTIF_PREFIX)) return;
+export function setupNotificationListener(): void {
+  browser.notifications.onClicked.addListener(async (notifId: string) => {
+    if (!notifId.startsWith(NOTIF_PREFIX)) return;
 
-  // Restore the most recently closed tab from graveyard
-  const { getGraveyard } = await import('../shared/storage');
-  const graveyard = await getGraveyard();
-  if (graveyard.length > 0) {
-    const { restoreTab, removeEntry } = await import('./graveyard');
-    const entry = graveyard[0];
-    await restoreTab(entry.url);
-    await removeEntry(entry.closedAt);
-  }
-  browser.notifications.clear(notifId).catch(() => {});
-});
+    const graveyard = await getGraveyard();
+    if (graveyard.length > 0) {
+      const entry = graveyard[0];
+      await restoreTab(entry.url);
+      await removeEntry(entry.closedAt);
+    }
+    browser.notifications.clear(notifId).catch(() => {});
+  });
+}
