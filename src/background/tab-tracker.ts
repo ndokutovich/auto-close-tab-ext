@@ -98,10 +98,23 @@ export async function flush(): Promise<void> {
 
 // --- Event listeners ---
 
+let currentActiveTabId: number | undefined;
+
 export function setupTabListeners(): void {
+  // Track initial active tab
+  browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
+    if (tabs[0]?.id) currentActiveTabId = tabs[0].id;
+  });
+
   browser.tabs.onActivated.addListener(({ tabId }) => {
+    // Update the tab we're LEAVING — its timer starts NOW, not when we arrived
+    if (currentActiveTabId !== undefined && currentActiveTabId !== tabId) {
+      recordActivation(currentActiveTabId);
+    }
+
+    // Update the tab we're ARRIVING at
+    currentActiveTabId = tabId;
     recordActivation(tabId);
-    // Send RESET_AGING to content script (fire-and-forget)
     browser.tabs.sendMessage(tabId, { type: 'RESET_AGING' }).catch(() => {});
   });
 
