@@ -1,9 +1,10 @@
 import browser from 'webextension-polyfill';
 import type { GraveyardEntry } from '../shared/types';
-import { formatTime, defaultFavicon } from '../shared/pure';
+import { formatTime, defaultFavicon, sortGraveyard, type GraveyardSortMode } from '../shared/pure';
 import { FALLBACK_FAVICON } from '../shared/constants';
 
 const searchInput = document.getElementById('search') as HTMLInputElement;
+const sortSelect = document.getElementById('sort-mode') as HTMLSelectElement;
 const listEl = document.getElementById('graveyard-list')!;
 const countEl = document.getElementById('graveyard-count')!;
 const btnClear = document.getElementById('btn-clear')!;
@@ -13,7 +14,23 @@ let allEntries: GraveyardEntry[] = [];
 
 async function loadGraveyard(): Promise<void> {
   allEntries = await browser.runtime.sendMessage({ type: 'GET_GRAVEYARD' }) || [];
-  render(allEntries);
+  applyFilters();
+}
+
+function applyFilters(): void {
+  const sortMode = sortSelect.value as GraveyardSortMode;
+  let entries = sortGraveyard(allEntries, sortMode);
+
+  const query = searchInput.value.toLowerCase().trim();
+  if (query) {
+    entries = entries.filter(e =>
+      e.title.toLowerCase().includes(query) ||
+      e.url.toLowerCase().includes(query) ||
+      e.domain.toLowerCase().includes(query)
+    );
+  }
+
+  render(entries);
 }
 
 function createEntryElement(entry: GraveyardEntry): HTMLElement {
@@ -61,7 +78,6 @@ function createEntryElement(entry: GraveyardEntry): HTMLElement {
 function render(entries: GraveyardEntry[]): void {
   countEl.textContent = `${entries.length} tab${entries.length !== 1 ? 's' : ''}`;
 
-  // Clear previous content
   while (listEl.firstChild) {
     listEl.removeChild(listEl.firstChild);
   }
@@ -88,7 +104,6 @@ listEl.addEventListener('click', async (e) => {
   const item = target.closest('.graveyard-item') as HTMLElement | null;
   if (!item) return;
 
-  // Remove button
   if (target.classList.contains('btn-remove')) {
     e.stopPropagation();
     const closedAt = Number(item.dataset.closedAt);
@@ -97,7 +112,6 @@ listEl.addEventListener('click', async (e) => {
     return;
   }
 
-  // Restore tab
   const url = item.dataset.url;
   if (url) {
     await browser.runtime.sendMessage({ type: 'RESTORE_TAB', url });
@@ -105,20 +119,8 @@ listEl.addEventListener('click', async (e) => {
   }
 });
 
-searchInput.addEventListener('input', () => {
-  const query = searchInput.value.toLowerCase().trim();
-  if (!query) {
-    render(allEntries);
-    return;
-  }
-
-  const filtered = allEntries.filter(e =>
-    e.title.toLowerCase().includes(query) ||
-    e.url.toLowerCase().includes(query) ||
-    e.domain.toLowerCase().includes(query)
-  );
-  render(filtered);
-});
+searchInput.addEventListener('input', applyFilters);
+sortSelect.addEventListener('change', applyFilters);
 
 btnClear.addEventListener('click', async () => {
   if (allEntries.length === 0) return;
@@ -130,5 +132,4 @@ btnOptions.addEventListener('click', () => {
   browser.runtime.openOptionsPage();
 });
 
-// Load on popup open
 loadGraveyard();

@@ -8,6 +8,8 @@ export interface Settings {
   faviconDimming: boolean;
   titlePrefix: boolean;
   closeEmptyTabs: boolean;
+  protectGroupedTabs: boolean;
+  expireAction: 'close' | 'discard';
   graveyardMaxSize: number;
   minTabCount: number;
   whitelistedDomains: string[];
@@ -52,7 +54,12 @@ export type UiToBgMsg =
   | { type: 'CLEAR_GRAVEYARD' }
   | { type: 'GET_SETTINGS' }
   | { type: 'SAVE_SETTINGS'; settings: Partial<Settings> }
-  | { type: 'GET_TAB_STATES' };
+  | { type: 'GET_TAB_STATES' }
+  | { type: 'LOCK_TAB'; tabId: number }
+  | { type: 'UNLOCK_TAB'; tabId: number }
+  | { type: 'GET_LOCKED_TABS' }
+  | { type: 'EXPORT_DATA' }
+  | { type: 'IMPORT_DATA'; data: string };
 
 // --- Messages: Background -> Popup/Options ---
 
@@ -71,4 +78,5 @@ export interface StorageSchema {
   tabTimes: Record<number, number>;
   tabStages: Record<number, AgingStage>;
   graveyard: GraveyardEntry[];
+  lockedTabs: number[];
 }

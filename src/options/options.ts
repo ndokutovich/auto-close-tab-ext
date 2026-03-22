@@ -5,13 +5,17 @@ import { FALLBACK_FAVICON } from '../shared/constants';
 
 const timeoutInput = document.getElementById('timeout') as HTMLInputElement;
 const minTabsInput = document.getElementById('minTabs') as HTMLInputElement;
+const expireActionSelect = document.getElementById('expireAction') as HTMLSelectElement;
 const closeEmptyToggle = document.getElementById('closeEmptyTabs') as HTMLInputElement;
+const protectGroupsToggle = document.getElementById('protectGroupedTabs') as HTMLInputElement;
 const faviconToggle = document.getElementById('faviconDimming') as HTMLInputElement;
 const titleToggle = document.getElementById('titlePrefix') as HTMLInputElement;
 const whitelistArea = document.getElementById('whitelist') as HTMLTextAreaElement;
 const graveyardSizeInput = document.getElementById('graveyardSize') as HTMLInputElement;
 const graveyardCountEl = document.getElementById('graveyard-count')!;
 const graveyardListEl = document.getElementById('graveyard-list')!;
+const btnExport = document.getElementById('btn-export')!;
+const btnImport = document.getElementById('btn-import') as HTMLInputElement;
 const btnClear = document.getElementById('btn-clear')!;
 const btnSave = document.getElementById('btn-save')!;
 const saveStatusEl = document.getElementById('save-status')!;
@@ -21,7 +25,9 @@ async function loadSettings(): Promise<void> {
 
   timeoutInput.value = String(settings.timeoutMinutes);
   minTabsInput.value = String(settings.minTabCount);
+  expireActionSelect.value = settings.expireAction;
   closeEmptyToggle.checked = settings.closeEmptyTabs;
+  protectGroupsToggle.checked = settings.protectGroupedTabs;
   faviconToggle.checked = settings.faviconDimming;
   titleToggle.checked = settings.titlePrefix;
   whitelistArea.value = settings.whitelistedDomains.join('\n');
@@ -37,7 +43,9 @@ async function saveSettings(): Promise<void> {
   const settings: Partial<Settings> = {
     timeoutMinutes: Math.max(1, Number(timeoutInput.value) || 30),
     minTabCount: Math.max(1, Number(minTabsInput.value) || 3),
+    expireAction: expireActionSelect.value as 'close' | 'discard',
     closeEmptyTabs: closeEmptyToggle.checked,
+    protectGroupedTabs: protectGroupsToggle.checked,
     faviconDimming: faviconToggle.checked,
     titlePrefix: titleToggle.checked,
     whitelistedDomains: domains,
@@ -54,7 +62,6 @@ async function loadGraveyard(): Promise<void> {
   const entries: GraveyardEntry[] = await browser.runtime.sendMessage({ type: 'GET_GRAVEYARD' }) || [];
   graveyardCountEl.textContent = `${entries.length} tab${entries.length !== 1 ? 's' : ''} in graveyard`;
 
-  // Clear previous
   while (graveyardListEl.firstChild) {
     graveyardListEl.removeChild(graveyardListEl.firstChild);
   }
@@ -108,6 +115,31 @@ function createEntryElement(entry: GraveyardEntry): HTMLElement {
   return item;
 }
 
+async function exportData(): Promise<void> {
+  const data: string = await browser.runtime.sendMessage({ type: 'EXPORT_DATA' });
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `aging-tabs-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function importDataFromFile(file: File): Promise<void> {
+  const text = await file.text();
+  try {
+    await browser.runtime.sendMessage({ type: 'IMPORT_DATA', data: text });
+    await loadSettings();
+    await loadGraveyard();
+    saveStatusEl.textContent = 'Imported';
+    setTimeout(() => { saveStatusEl.textContent = ''; }, 2000);
+  } catch {
+    saveStatusEl.textContent = 'Import failed';
+    setTimeout(() => { saveStatusEl.textContent = ''; }, 3000);
+  }
+}
+
 // --- Event handlers ---
 
 btnSave.addEventListener('click', saveSettings);
@@ -115,7 +147,14 @@ btnClear.addEventListener('click', async () => {
   await browser.runtime.sendMessage({ type: 'CLEAR_GRAVEYARD' });
   await loadGraveyard();
 });
+btnExport.addEventListener('click', exportData);
+btnImport.addEventListener('change', () => {
+  const file = btnImport.files?.[0];
+  if (file) {
+    importDataFromFile(file);
+    btnImport.value = '';
+  }
+});
 
-// Load on page open
 loadSettings();
 loadGraveyard();

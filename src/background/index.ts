@@ -2,6 +2,7 @@ import browser from 'webextension-polyfill';
 import { initTracker, setupTabListeners } from './tab-tracker';
 import { startTimer, onAlarmFired, setupNotificationListener } from './timer-manager';
 import { setupMessageListener } from './messaging';
+import { setupContextMenu, toggleLockForTab } from './context-menu';
 import { syncBadge } from './graveyard';
 import { isRestrictedUrl } from '../shared/pure';
 
@@ -15,6 +16,8 @@ async function init(freshInstall = false): Promise<void> {
       setupTabListeners();
       setupMessageListener();
       setupNotificationListener();
+      setupContextMenu();
+      setupKeyboardShortcuts();
       browser.alarms.onAlarm.addListener(onAlarmFired);
       listenersRegistered = true;
     }
@@ -25,8 +28,19 @@ async function init(freshInstall = false): Promise<void> {
     console.error('[Aging Tabs] Init error:', err);
   }
 
-  // Content script injection is best-effort — don't let it crash init
   injectContentScripts();
+}
+
+function setupKeyboardShortcuts(): void {
+  if (!browser.commands?.onCommand) return;
+  browser.commands.onCommand.addListener(async (command: string) => {
+    if (command === 'lock-current-tab') {
+      const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+      if (tab?.id) {
+        await toggleLockForTab(tab.id);
+      }
+    }
+  });
 }
 
 async function injectContentScripts(): Promise<void> {

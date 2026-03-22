@@ -2,7 +2,7 @@ import browser from 'webextension-polyfill';
 import type { AgingStage, BgToContentMsg } from '../shared/types';
 import { ALARM_NAME, CHECK_INTERVAL_SECONDS } from '../shared/constants';
 import { computeAgingStage, extractDomain } from '../shared/pure';
-import { getSettings, getGraveyard } from '../shared/storage';
+import { getSettings, getGraveyard, getLockedTabs } from '../shared/storage';
 import {
   ensureLoaded,
   reloadFromStorage,
@@ -37,7 +37,8 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
   const allTabs = await browser.tabs.query({});
   const tabMap = new Map(allTabs.map(t => [t.id!, t]));
 
-  const immunityCtx = buildImmunityContext(settings, allTabs);
+  const lockedTabs = await getLockedTabs();
+  const immunityCtx = buildImmunityContext(settings, allTabs, lockedTabs);
 
   const trackedIds = getAllTrackedTabIds();
   const tabsToClose: number[] = [];
@@ -73,20 +74,24 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
     }
   }
 
-  // Close expired tabs, tracking count locally instead of re-querying
+  // Handle expired tabs — close or discard based on setting
   let tabCount = immunityCtx.totalTabCount;
   for (const tabId of tabsToClose) {
     if (tabCount <= settings.minTabCount) break;
     try {
       const tab = tabMap.get(tabId);
-      if (tab) {
+      if (!tab) continue;
+
+      if (settings.expireAction === 'discard') {
+        await browser.tabs.discard(tabId);
+      } else {
         await buryTab(tab, settings.graveyardMaxSize);
         await browser.tabs.remove(tabId);
         tabCount--;
         showCloseNotification(tab);
       }
     } catch {
-      // Tab already gone
+      // Tab already gone or can't be discarded
     }
   }
 

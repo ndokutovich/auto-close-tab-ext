@@ -1,174 +1,131 @@
-# Aging Tabs — Browser Extension Plan
+# Aging Tabs — Feature Expansion Plan
 
 ## Context
 
-Growing tab count causes decision paralysis — you keep tabs open "just in case" and never close them. Hard auto-close loses information. The original **Aging Tabs** (Dao Gottwald, ~2008, XUL) solved this with progressive visual fading + auto-bookmark before close. It died with Firefox 57. No modern extension combines visual aging countdown with auto-close + graveyard. This fills that gap.
+Core extension is complete (auto-close + visual aging + graveyard + idle pause + notifications). Competitive analysis shows 7 features that competitors have and we don't. Adding all of them to reach feature parity with Tab Wrangler while keeping our unique UX advantages.
 
-## Core Formula
+## Features to Add
 
-```
-Visual countdown (favicon dimming + optional title prefix)
-+ Filtered graveyard (not bookmarks, not history — own searchable list)
-+ Pinned/audible/whitelist immunity
-+ Configurable timer
-+ One-click restore
-```
+### 1. Lock Tab (context menu + messaging)
 
-## Tech Stack
+**What**: Right-click tab → "Lock this tab" / "Unlock this tab". Locked tabs are immune to auto-close without needing to pin them. Lock state shown in popup.
 
-- **TypeScript**, vanilla (no framework for popup/options — UI is simple)
-- **esbuild** for bundling
-- **webextension-polyfill** for cross-browser compat
-- **Manifest V3** for both Chrome and Firefox
-- Dual build output: `dist/chrome/` and `dist/firefox/`
+**Files to modify**:
+- `src/shared/types.ts` — add `LOCK_TAB` / `UNLOCK_TAB` / `GET_LOCKED_TABS` to `UiToBgMsg`
+- `src/shared/storage.ts` — add `getLockedTabs()` / `setLockedTabs()` for `Set<number>` stored as array
+- `src/shared/constants.ts` — add `STORAGE_KEYS.LOCKED_TABS`
+- `src/background/immunity.ts` — add locked tab check in `isImmune()`
+- `src/background/messaging.ts` — handle lock/unlock messages
+- **New**: `src/background/context-menu.ts` — create/update context menu items
+- `src/background/index.ts` — register context menu setup
+- `src/manifests/*.json` — add `"contextMenus"` permission
 
-## File Structure
+### 2. Graveyard Sort/Filter by Domain
 
-```
-aging-tabs/
-  package.json
-  tsconfig.json
-  build.mjs                          # esbuild dual-browser build
-  src/
-    manifests/
-      manifest.chrome.json           # service_worker, favicon permission
-      manifest.firefox.json          # scripts[], gecko settings
-    background/
-      index.ts                       # Entry: wire tracker + timer + messaging
-      timer-manager.ts               # Alarm loop, stage computation, close logic
-      tab-tracker.ts                 # Track lastAccessed via tabs events
-      graveyard.ts                   # Closed-tab archive, badge count
-      immunity.ts                    # Pinned/audible/active/whitelist/floor checks
-      messaging.ts                   # Message router bg <-> content/popup
-    content/
-      index.ts                       # Content script entry, message dispatch
-      favicon-aging.ts               # Canvas grayscale overlay on favicon
-      title-aging.ts                 # Title prefix with MutationObserver
-    popup/
-      popup.html / popup.ts / popup.css   # Quick graveyard list + search + restore
-    options/
-      options.html / options.ts / options.css  # Full settings + graveyard + whitelist
-    shared/
-      types.ts                       # Interfaces, message protocol, AgingStage
-      constants.ts                   # Defaults, stage thresholds
-      storage.ts                     # Typed async storage wrappers
-    icons/
-      icon-16.png, icon-32.png, icon-48.png, icon-128.png
-  dist/
-    chrome/
-    firefox/
-```
+**What**: Popup gets a sort dropdown: "Recent" (default), "By domain", "A-Z". Options page graveyard gets the same.
 
-## Architecture
+**Files to modify**:
+- `src/popup/popup.html` — add sort selector in header
+- `src/popup/popup.ts` — sort logic before render
+- `src/popup/popup.css` — style for sort control
+- `src/options/options.ts` — same sort logic (extract to shared)
+- `src/shared/pure.ts` — add `sortGraveyard(entries, mode)` pure function
 
-### Aging Cycle Data Flow
+### 3. JSON Export/Import Graveyard
 
-```
-tabs.onActivated / onUpdated
-        │
-  [tab-tracker.ts] → records lastAccessed in memory + storage.local
-        │
-  [timer-manager.ts] ← alarms.onAlarm every 30s
-        │ for each tracked tab:
-        │   skip if immune (pinned/audible/active/whitelist/floor)
-        │   compute stage = elapsed / timeout * 4 (clamped 0-4)
-        │   if stage changed → send UPDATE_AGING to content script
-        │   if elapsed >= timeout → close tab, add to graveyard
-        │
-  tabs.sendMessage(tabId, { type: 'UPDATE_AGING', stage })
-        │
-  [content/index.ts]
-    ├─ favicon-aging.ts → canvas grayscale: 0%→25%→50%→75%→100%
-    └─ title-aging.ts   → prefix: [⏳]→[💤]→[👻] (optional)
-```
+**What**: Options page gets "Export" button (downloads JSON) and "Import" button (file picker, merges).
 
-### Tab Activation → Reset
+**Files to modify**:
+- `src/options/options.html` — add Export/Import buttons in Graveyard section
+- `src/options/options.ts` — export: `JSON.stringify` + download blob; import: file input + merge
+- `src/shared/types.ts` — add `EXPORT_DATA` / `IMPORT_DATA` message types
+- `src/background/messaging.ts` — handle export (return full storage) / import (merge + validate)
 
-```
-tabs.onActivated → tab-tracker resets lastAccessed
-                 → sends RESET_AGING to content script
-                 → content restores original favicon + removes title prefix
-```
+### 4. Keyboard Shortcut (lock current tab)
 
-### CORS Favicon Fallback
+**What**: `Alt+L` locks/unlocks the current tab. Configurable in browser's shortcut settings.
 
-Content script can't draw cross-origin favicons on canvas. Fallback:
-1. Content sends `FETCH_FAVICON_REQUEST` to background
-2. Background fetches via `fetch()` (has host permissions), converts to data URL
-3. Background sends data URL back to content script
-4. Content draws data URL on canvas without tainting
+**Files to modify**:
+- `src/manifests/*.json` — add `"commands"` key with `"lock-current-tab"` command
+- `src/background/index.ts` — add `browser.commands.onCommand` listener
 
-## Storage Schema
+### 5. i18n (EN + RU)
 
-```typescript
-interface Settings {
-  timeoutMinutes: number;        // default: 30
-  faviconDimming: boolean;       // default: true
-  titlePrefix: boolean;          // default: false
-  graveyardMaxSize: number;      // default: 200
-  minTabCount: number;           // default: 3
-  whitelistedDomains: string[];  // default: []
-}
+**What**: All UI strings externalized to `_locales/en/messages.json` and `_locales/ru/messages.json`.
 
-interface GraveyardEntry {
-  url: string;
-  title: string;
-  faviconUrl: string;
-  closedAt: number;
-  domain: string;
-}
+**Files to create**:
+- `src/_locales/en/messages.json`
+- `src/_locales/ru/messages.json`
+- `src/manifests/*.json` — add `"default_locale": "en"`
 
-// storage.local keys:
-// "settings"   → Settings
-// "tabTimes"   → Record<number, number>  (tabId → timestamp)
-// "tabStages"  → Record<number, AgingStage>
-// "graveyard"  → GraveyardEntry[]
-```
+**Files to modify**:
+- `src/popup/popup.html` — replace hardcoded text with `__MSG_key__` or `browser.i18n.getMessage()`
+- `src/options/options.html` — same
+- All `.ts` UI files — use `browser.i18n.getMessage()` for dynamic strings
 
-## Manifest Differences
+### 6. Tab Groups Protection (FF 138+)
 
-| | Chrome | Firefox |
-|---|---|---|
-| Background | `service_worker: "background.js"` | `scripts: ["browser-polyfill.js", "background.js"]` |
-| Extra permission | `"favicon"` | — |
-| Gecko settings | — | `browser_specific_settings.gecko` with ID + min version 121 |
+**What**: Tabs in a named group are immune to auto-close. Graceful fallback if API unavailable.
 
-## Implementation Phases
+**Files to modify**:
+- `src/background/immunity.ts` — check `tab.groupId !== undefined && tab.groupId !== -1`
+- `src/shared/types.ts` — add `protectGroupedTabs: boolean` to `Settings`
+- `src/shared/constants.ts` — default `true`
+- `src/options/options.html` — add toggle
+- `src/options/options.ts` — wire toggle
 
-### Phase 1: Skeleton + Timer
-Build system, manifests, shared types, tab tracking, immunity checks, alarm-based close loop. **Testable**: set timeout to 1 min, watch tab close.
+### 7. Discard Mode (alternative to close)
 
-### Phase 2: Graveyard + Popup
-Store closed tabs, popup UI with search + restore, badge count on extension icon.
+**What**: New setting "When tab expires: Close / Discard". Discard keeps tab in bar but unloads from memory. Graveyard not needed for discarded tabs.
 
-### Phase 3: Favicon Aging
-Content script canvas rendering, progressive grayscale, CORS fallback relay. **Testable**: open tabs, watch favicons dim over time.
+**Files to modify**:
+- `src/shared/types.ts` — add `expireAction: 'close' | 'discard'` to `Settings`
+- `src/shared/constants.ts` — default `'close'`
+- `src/background/timer-manager.ts` — in close loop: if discard mode, call `browser.tabs.discard(tabId)` instead of `tabs.remove()`
+- `src/options/options.html` — add radio/select
+- `src/options/options.ts` — wire setting
 
-### Phase 4: Title Prefix
-Optional title prefix with MutationObserver for SPA compat.
+## Implementation Order
 
-### Phase 5: Options Page
-Full settings form, whitelist domain editor, full graveyard with pagination.
+Grouped by dependency and blast radius (smallest first):
 
-### Phase 6: Cross-Browser Polish
-Firefox testing, service worker lifecycle edge cases, icons, `onInstalled` sweep for existing tabs.
+| Phase | Features | Why this order |
+|-------|----------|---------------|
+| A | 4 (shortcuts) + 1 (lock + context menu) | Lock is the most requested, shortcuts depend on it |
+| B | 2 (sort) + 3 (export) | Graveyard improvements, independent of each other |
+| C | 6 (groups) + 7 (discard) | New immunity/timer behaviors |
+| D | 5 (i18n) | Touches every UI file, do last |
 
-## Key Edge Cases
+## Key Files Summary
 
-- **Service worker death (Chrome)**: All state recoverable from `storage.local`. Timer reads storage on every alarm if memory cache is empty.
-- **Restricted tabs** (`chrome://`, `about:`): Can't inject content scripts → track and close, but no visual aging. Catch "no receiving end" errors.
-- **SPA title changes**: MutationObserver on `<title>`, temporarily disconnect while applying prefix to avoid loops.
-- **Min alarm period**: Chrome enforces 30s minimum for `alarms` API. UI enforces this floor.
-- **Browser restart**: `runtime.onStartup` reconciles stored tabTimes with actual open tabs.
+| File | Features touching it |
+|------|---------------------|
+| `src/shared/types.ts` | 1, 2, 3, 5, 6, 7 |
+| `src/shared/constants.ts` | 1, 6, 7 |
+| `src/shared/storage.ts` | 1 |
+| `src/shared/pure.ts` | 2 |
+| `src/background/immunity.ts` | 1, 6 |
+| `src/background/messaging.ts` | 1, 3 |
+| `src/background/timer-manager.ts` | 7 |
+| `src/background/index.ts` | 1, 4 |
+| `src/popup/popup.html` | 2, 5 |
+| `src/popup/popup.ts` | 2, 5 |
+| `src/options/options.html` | 3, 5, 6, 7 |
+| `src/options/options.ts` | 3, 5, 6, 7 |
+| Both manifests | 1, 4, 5, 6 |
+| **New**: `src/background/context-menu.ts` | 1 |
+| **New**: `src/_locales/en/messages.json` | 5 |
+| **New**: `src/_locales/ru/messages.json` | 5 |
 
 ## Verification
 
-1. Load unpacked in Chrome (`dist/chrome/`) and Firefox (`dist/firefox/`)
-2. Open 5+ tabs, verify favicon dimming progresses through stages
-3. Let a tab auto-close, verify it appears in popup graveyard
-4. Click restore in popup, verify tab reopens
-5. Pin a tab, verify it never closes
-6. Play audio in a tab, verify it's immune while playing
-7. Add a domain to whitelist, verify tabs from that domain don't close
-8. Set min tab count = 3, verify closing stops at 3 tabs
-9. Restart browser, verify tab timers resume from correct state
+After each phase:
+1. `npm run build` — both targets succeed
+2. `npx tsc --noEmit` — zero type errors
+3. `npx vitest run` — all tests pass
+4. Load in Firefox `about:debugging` — background stays running
+5. Manual test of each new feature
+
+After all phases:
+- Run `/simplify` for code review
+- Run Stryker for mutation score (add property tests for new pure functions)

@@ -3,7 +3,7 @@
   "name": "Aging Tabs",
   "version": "1.0.0",
   "description": "Auto-close inactive tabs with visual aging feedback and a searchable graveyard",
-  "permissions": ["tabs", "alarms", "storage", "scripting", "notifications", "idle"],
+  "permissions": ["tabs", "alarms", "storage", "scripting", "notifications", "idle", "contextMenus"],
   "host_permissions": ["<all_urls>"],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'none'"
@@ -34,5 +34,11 @@
     "32": "icons/icon-32.svg",
     "48": "icons/icon-48.svg",
     "128": "icons/icon-128.svg"
+  },
+  "commands": {
+    "lock-current-tab": {
+      "suggested_key": { "default": "Alt+L" },
+      "description": "Lock/unlock current tab (prevent auto-close)"
+    }
   }
 }

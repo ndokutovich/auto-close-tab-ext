@@ -5,6 +5,8 @@ export const DEFAULT_SETTINGS: Settings = {
   faviconDimming: true,
   titlePrefix: false,
   closeEmptyTabs: true,
+  protectGroupedTabs: true,
+  expireAction: 'close',
   graveyardMaxSize: 200,
   minTabCount: 3,
   whitelistedDomains: [],
@@ -37,6 +39,7 @@ export const STORAGE_KEYS = {
   TAB_TIMES: 'tabTimes',
   TAB_STAGES: 'tabStages',
   GRAVEYARD: 'graveyard',
+  LOCKED_TABS: 'lockedTabs',
 } as const;
 
 // Number of aging stages (0-4)

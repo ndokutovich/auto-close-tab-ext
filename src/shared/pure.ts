@@ -3,7 +3,7 @@
  * No browser API dependencies — these work in Node.js / vitest.
  */
 
-import type { AgingStage, Settings } from './types';
+import type { AgingStage, Settings, GraveyardEntry } from './types';
 import { MAX_STAGE } from './constants';
 
 /**
@@ -124,6 +124,25 @@ export function defaultFavicon(url: string): string {
     return new URL(url).origin + '/favicon.ico';
   } catch {
     return '';
+  }
+}
+
+/**
+ * Sort graveyard entries by mode.
+ */
+export type GraveyardSortMode = 'recent' | 'domain' | 'alpha';
+
+export function sortGraveyard(entries: GraveyardEntry[], mode: GraveyardSortMode): GraveyardEntry[] {
+  const sorted = [...entries];
+  switch (mode) {
+    case 'recent':
+      return sorted.sort((a, b) => b.closedAt - a.closedAt);
+    case 'domain':
+      return sorted.sort((a, b) => a.domain.localeCompare(b.domain) || b.closedAt - a.closedAt);
+    case 'alpha':
+      return sorted.sort((a, b) => a.title.localeCompare(b.title));
+    default:
+      return sorted;
   }
 }
 

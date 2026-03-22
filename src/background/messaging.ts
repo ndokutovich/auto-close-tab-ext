@@ -1,6 +1,6 @@
 import browser from 'webextension-polyfill';
 import type { ExtensionMessage } from '../shared/types';
-import { getSettings, saveSettings, getGraveyard } from '../shared/storage';
+import { getSettings, saveSettings, getGraveyard, getLockedTabs, lockTab, unlockTab, exportAllData, importData } from '../shared/storage';
 import { restoreTab, removeEntry, clearAll } from './graveyard';
 import { getAllTrackedTabIds, getLastAccessed, getStage } from './tab-tracker';
 
@@ -112,6 +112,25 @@ export function setupMessageListener(): void {
         case 'SAVE_SETTINGS':
           if (!isExtensionSender(sender)) return Promise.resolve({ ok: false });
           return saveSettings(msg.settings);
+
+        case 'LOCK_TAB':
+          if (!isExtensionSender(sender)) return Promise.resolve({ ok: false });
+          return lockTab(msg.tabId).then(() => ({ ok: true }));
+
+        case 'UNLOCK_TAB':
+          if (!isExtensionSender(sender)) return Promise.resolve({ ok: false });
+          return unlockTab(msg.tabId).then(() => ({ ok: true }));
+
+        case 'GET_LOCKED_TABS':
+          return getLockedTabs();
+
+        case 'EXPORT_DATA':
+          if (!isExtensionSender(sender)) return Promise.resolve({ ok: false });
+          return exportAllData();
+
+        case 'IMPORT_DATA':
+          if (!isExtensionSender(sender)) return Promise.resolve({ ok: false });
+          return importData(msg.data).then(() => ({ ok: true }));
 
         default:
           return undefined;

@@ -29,6 +29,13 @@
           <span class="unit">tabs open</span>
         </div>
       </div>
+      <div class="field">
+        <label for="expireAction">When tab expires</label>
+        <select id="expireAction" class="select-field">
+          <option value="close">Close tab (save to graveyard)</option>
+          <option value="discard">Discard tab (unload from memory)</option>
+        </select>
+      </div>
     </section>
 
     <section class="section">
@@ -37,6 +44,11 @@
         <label for="closeEmptyTabs">Close empty tabs</label>
         <p class="hint">Auto-close about:blank and new tab pages when inactive</p>
         <input type="checkbox" id="closeEmptyTabs">
+      </div>
+      <div class="field toggle">
+        <label for="protectGroupedTabs">Protect grouped tabs</label>
+        <p class="hint">Tabs in a group are immune to auto-close (Firefox 138+ / Chrome)</p>
+        <input type="checkbox" id="protectGroupedTabs">
       </div>
     </section>
 
@@ -73,7 +85,14 @@
       <div id="graveyard-section">
         <div class="graveyard-header">
           <span id="graveyard-count">0 tabs in graveyard</span>
-          <button id="btn-clear" class="btn-danger">Clear all</button>
+          <div class="graveyard-actions">
+            <button id="btn-export" class="btn-secondary">Export</button>
+            <label class="btn-secondary btn-file">
+              Import
+              <input type="file" id="btn-import" accept=".json" hidden>
+            </label>
+            <button id="btn-clear" class="btn-danger">Clear all</button>
+          </div>
         </div>
         <div id="graveyard-list" class="graveyard-list"></div>
       </div>

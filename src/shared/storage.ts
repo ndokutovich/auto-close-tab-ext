@@ -28,6 +28,8 @@ export async function saveSettings(partial: Partial<Settings>): Promise<Settings
     faviconDimming: !!merged.faviconDimming,
     titlePrefix: !!merged.titlePrefix,
     closeEmptyTabs: !!merged.closeEmptyTabs,
+    protectGroupedTabs: !!merged.protectGroupedTabs,
+    expireAction: merged.expireAction === 'discard' ? 'discard' : 'close',
     whitelistedDomains: Array.isArray(merged.whitelistedDomains)
       ? merged.whitelistedDomains.filter((d): d is string => typeof d === 'string').slice(0, 100)
       : current.whitelistedDomains,
@@ -96,4 +98,60 @@ export async function removeFromGraveyard(closedAt: number): Promise<GraveyardEn
 
 export async function clearGraveyard(): Promise<void> {
   await browser.storage.local.set({ [STORAGE_KEYS.GRAVEYARD]: [] });
+}
+
+// --- Locked tabs ---
+
+export async function getLockedTabs(): Promise<number[]> {
+  try {
+    const result = await browser.storage.local.get(STORAGE_KEYS.LOCKED_TABS);
+    const data = result[STORAGE_KEYS.LOCKED_TABS];
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function setLockedTabs(tabIds: number[]): Promise<void> {
+  await browser.storage.local.set({ [STORAGE_KEYS.LOCKED_TABS]: tabIds });
+}
+
+export async function lockTab(tabId: number): Promise<number[]> {
+  const locked = await getLockedTabs();
+  if (!locked.includes(tabId)) {
+    locked.push(tabId);
+    await setLockedTabs(locked);
+  }
+  return locked;
+}
+
+export async function unlockTab(tabId: number): Promise<number[]> {
+  let locked = await getLockedTabs();
+  locked = locked.filter(id => id !== tabId);
+  await setLockedTabs(locked);
+  return locked;
+}
+
+export async function isTabLocked(tabId: number): Promise<boolean> {
+  const locked = await getLockedTabs();
+  return locked.includes(tabId);
+}
+
+// --- Full export/import ---
+
+export async function exportAllData(): Promise<string> {
+  const data = await browser.storage.local.get(null);
+  return JSON.stringify(data, null, 2);
+}
+
+export async function importData(jsonString: string): Promise<void> {
+  const data = JSON.parse(jsonString);
+  if (typeof data !== 'object' || data === null) throw new Error('Invalid data');
+  // Only import known keys
+  const allowed = Object.values(STORAGE_KEYS);
+  const filtered: Record<string, unknown> = {};
+  for (const key of allowed) {
+    if (key in data) filtered[key] = data[key];
+  }
+  await browser.storage.local.set(filtered);
 }
