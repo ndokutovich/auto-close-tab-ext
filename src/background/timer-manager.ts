@@ -83,6 +83,7 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
         await buryTab(tab, settings.graveyardMaxSize);
         await browser.tabs.remove(tabId);
         tabCount--;
+        showCloseNotification(tab);
       }
     } catch {
       // Tab already gone
@@ -96,3 +97,39 @@ function sendAgingUpdate(tabId: number, stage: AgingStage, timeRemainingMs: numb
   const message: BgToContentMsg = { type: 'UPDATE_AGING', stage, timeRemainingMs };
   browser.tabs.sendMessage(tabId, message).catch(() => {});
 }
+
+const NOTIF_PREFIX = 'aging-tabs-closed-';
+
+function showCloseNotification(tab: browser.Tabs.Tab): void {
+  const notifId = NOTIF_PREFIX + Date.now();
+  const title = tab.title || 'Untitled';
+  const domain = tab.url ? new URL(tab.url).hostname : '';
+
+  browser.notifications.create(notifId, {
+    type: 'basic',
+    iconUrl: tab.favIconUrl || browser.runtime.getURL('icons/icon-48.svg'),
+    title: 'Tab closed',
+    message: `${title}\n${domain}`,
+  }).catch(() => {});
+
+  // Auto-clear after 8 seconds
+  setTimeout(() => {
+    browser.notifications.clear(notifId).catch(() => {});
+  }, 8000);
+}
+
+// Click notification → restore tab
+browser.notifications.onClicked.addListener(async (notifId: string) => {
+  if (!notifId.startsWith(NOTIF_PREFIX)) return;
+
+  // Restore the most recently closed tab from graveyard
+  const { getGraveyard } = await import('../shared/storage');
+  const graveyard = await getGraveyard();
+  if (graveyard.length > 0) {
+    const { restoreTab, removeEntry } = await import('./graveyard');
+    const entry = graveyard[0];
+    await restoreTab(entry.url);
+    await removeEntry(entry.closedAt);
+  }
+  browser.notifications.clear(notifId).catch(() => {});
+});

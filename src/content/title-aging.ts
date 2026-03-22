@@ -6,6 +6,8 @@ let originalTitle: string | null = null;
 let currentStage: AgingStage = 0;
 let observer: MutationObserver | null = null;
 let ignoreNextMutation = false;
+let blinkInterval: ReturnType<typeof setInterval> | null = null;
+let blinkState = false;
 
 function applyPrefix(stage: AgingStage): void {
   const prefix = STAGE_PREFIX[stage];
@@ -16,6 +18,25 @@ function applyPrefix(stage: AgingStage): void {
     document.title = prefix + baseTitle;
   } else {
     document.title = baseTitle;
+  }
+}
+
+function startBlink(): void {
+  if (blinkInterval) return;
+  const baseTitle = originalTitle ?? stripAgingPrefix(document.title);
+
+  blinkInterval = setInterval(() => {
+    ignoreNextMutation = true;
+    blinkState = !blinkState;
+    document.title = blinkState ? '\u26a0\ufe0f Closing soon...' : baseTitle;
+  }, 700);
+}
+
+function stopBlink(): void {
+  if (blinkInterval) {
+    clearInterval(blinkInterval);
+    blinkInterval = null;
+    blinkState = false;
   }
 }
 
@@ -31,7 +52,6 @@ function setupObserver(): void {
       return;
     }
 
-    // SPA changed the title — update our original and re-apply prefix
     const rawTitle = stripAgingPrefix(document.title);
     originalTitle = rawTitle;
 
@@ -51,17 +71,24 @@ export function handleTitleAging(stage: AgingStage): void {
     return;
   }
 
-  // Capture original on first aging
   if (originalTitle === null) {
     originalTitle = stripAgingPrefix(document.title);
   }
 
   setupObserver();
-  applyPrefix(stage);
+
+  // Stage 4: blink title as final warning
+  if (stage >= 4) {
+    startBlink();
+  } else {
+    stopBlink();
+    applyPrefix(stage);
+  }
 }
 
 export function resetTitle(): void {
   currentStage = 0;
+  stopBlink();
   if (originalTitle !== null) {
     ignoreNextMutation = true;
     document.title = originalTitle;
