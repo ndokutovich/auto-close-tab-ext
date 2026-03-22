@@ -142,4 +142,28 @@ export function setupTabListeners(): void {
       browser.tabs.sendMessage(tabId, { type: 'RESET_AGING' }).catch(() => {});
     }
   });
+
+  // Pause aging when system is idle/locked — we only age during active work time
+  let idleSince: number | null = null;
+
+  browser.idle.setDetectionInterval(60); // 1 minute of no input = idle
+
+  browser.idle.onStateChanged.addListener((state) => {
+    if (state === 'active') {
+      if (idleSince !== null) {
+        // User is back — shift all tab times forward by the idle duration
+        const idleDuration = Date.now() - idleSince;
+        for (const idStr of Object.keys(tabTimes)) {
+          tabTimes[Number(idStr)] += idleDuration;
+        }
+        dirty = true;
+        idleSince = null;
+      }
+    } else {
+      // idle or locked — record when it started
+      if (idleSince === null) {
+        idleSince = Date.now();
+      }
+    }
+  });
 }

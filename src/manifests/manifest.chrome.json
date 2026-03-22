@@ -3,7 +3,7 @@
   "name": "Aging Tabs",
   "version": "1.0.0",
   "description": "Auto-close inactive tabs with visual aging feedback and a searchable graveyard",
-  "permissions": ["tabs", "alarms", "storage", "scripting", "notifications"],
+  "permissions": ["tabs", "alarms", "storage", "scripting", "notifications", "idle"],
   "host_permissions": ["<all_urls>"],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'none'"
