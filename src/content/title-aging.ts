@@ -1,28 +1,15 @@
 import type { AgingStage } from '../shared/types';
 import { STAGE_PREFIX } from '../shared/constants';
+import { stripAgingPrefix } from '../shared/pure';
 
 let originalTitle: string | null = null;
 let currentStage: AgingStage = 0;
 let observer: MutationObserver | null = null;
 let ignoreNextMutation = false;
 
-function getPrefix(stage: AgingStage): string {
-  return STAGE_PREFIX[stage];
-}
-
-function stripPrefix(title: string): string {
-  // Remove any known prefix pattern
-  for (const prefix of Object.values(STAGE_PREFIX)) {
-    if (prefix && title.startsWith(prefix)) {
-      return title.slice(prefix.length);
-    }
-  }
-  return title;
-}
-
 function applyPrefix(stage: AgingStage): void {
-  const prefix = getPrefix(stage);
-  const baseTitle = originalTitle ?? stripPrefix(document.title);
+  const prefix = STAGE_PREFIX[stage];
+  const baseTitle = originalTitle ?? stripAgingPrefix(document.title);
 
   ignoreNextMutation = true;
   if (prefix) {
@@ -45,7 +32,7 @@ function setupObserver(): void {
     }
 
     // SPA changed the title — update our original and re-apply prefix
-    const rawTitle = stripPrefix(document.title);
+    const rawTitle = stripAgingPrefix(document.title);
     originalTitle = rawTitle;
 
     if (currentStage > 0) {
@@ -66,7 +53,7 @@ export function handleTitleAging(stage: AgingStage): void {
 
   // Capture original on first aging
   if (originalTitle === null) {
-    originalTitle = stripPrefix(document.title);
+    originalTitle = stripAgingPrefix(document.title);
   }
 
   setupObserver();

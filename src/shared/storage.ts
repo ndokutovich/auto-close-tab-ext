@@ -1,6 +1,7 @@
 import browser from 'webextension-polyfill';
 import type { Settings, GraveyardEntry, AgingStage } from './types';
 import { DEFAULT_SETTINGS, STORAGE_KEYS } from './constants';
+import { capGraveyard } from './pure';
 
 // --- Settings ---
 
@@ -48,12 +49,9 @@ export async function getGraveyard(): Promise<GraveyardEntry[]> {
 export async function addToGraveyard(entry: GraveyardEntry, maxSize: number): Promise<GraveyardEntry[]> {
   const graveyard = await getGraveyard();
   graveyard.unshift(entry);
-  // Evict oldest if over limit
-  while (graveyard.length > maxSize) {
-    graveyard.pop();
-  }
-  await browser.storage.local.set({ [STORAGE_KEYS.GRAVEYARD]: graveyard });
-  return graveyard;
+  const capped = capGraveyard(graveyard, maxSize);
+  await browser.storage.local.set({ [STORAGE_KEYS.GRAVEYARD]: capped });
+  return capped;
 }
 
 export async function removeFromGraveyard(closedAt: number): Promise<GraveyardEntry[]> {

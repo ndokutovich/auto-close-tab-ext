@@ -37,10 +37,9 @@ function applyGrayscale(img: HTMLImageElement, percentage: number): string {
 
   const w = img.naturalWidth || 32;
   const h = img.naturalHeight || 32;
-  // Only resize when dimensions change (avoids GPU texture re-allocation)
   if (c.width !== w) c.width = w;
   if (c.height !== h) c.height = h;
-  else ctx.clearRect(0, 0, c.width, c.height);
+  ctx.clearRect(0, 0, c.width, c.height);
   ctx.filter = `grayscale(${percentage}%)`;
   ctx.globalAlpha = 1 - (percentage / 100) * 0.3; // slight fade at full grayscale
   ctx.drawImage(img, 0, 0, c.width, c.height);
