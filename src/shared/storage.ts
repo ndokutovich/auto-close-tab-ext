@@ -12,7 +12,22 @@ export async function getSettings(): Promise<Settings> {
 
 export async function saveSettings(partial: Partial<Settings>): Promise<Settings> {
   const current = await getSettings();
-  const updated = { ...current, ...partial };
+  const merged = { ...current, ...partial };
+
+  // Enforce bounds to prevent abuse via crafted messages
+  const updated: Settings = {
+    ...merged,
+    timeoutMinutes: Math.max(1, Math.min(1440, Number(merged.timeoutMinutes) || current.timeoutMinutes)),
+    minTabCount: Math.max(1, Math.min(100, Number(merged.minTabCount) || current.minTabCount)),
+    graveyardMaxSize: Math.max(10, Math.min(1000, Number(merged.graveyardMaxSize) || current.graveyardMaxSize)),
+    faviconDimming: !!merged.faviconDimming,
+    titlePrefix: !!merged.titlePrefix,
+    closeEmptyTabs: !!merged.closeEmptyTabs,
+    whitelistedDomains: Array.isArray(merged.whitelistedDomains)
+      ? merged.whitelistedDomains.filter((d): d is string => typeof d === 'string').slice(0, 100)
+      : current.whitelistedDomains,
+  };
+
   await browser.storage.local.set({ [STORAGE_KEYS.SETTINGS]: updated });
   return updated;
 }

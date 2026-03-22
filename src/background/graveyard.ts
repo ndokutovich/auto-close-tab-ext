@@ -20,6 +20,10 @@ export async function buryTab(
 }
 
 export async function restoreTab(url: string): Promise<void> {
+  const parsed = new URL(url);
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error('Invalid protocol');
+  }
   await browser.tabs.create({ url, active: true });
 }
 

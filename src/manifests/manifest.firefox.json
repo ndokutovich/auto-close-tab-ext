@@ -5,6 +5,9 @@
   "description": "Auto-close inactive tabs with visual aging feedback and a searchable graveyard",
   "permissions": ["tabs", "alarms", "storage", "scripting"],
   "host_permissions": ["<all_urls>"],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'"
+  },
   "background": {
     "scripts": ["browser-polyfill.js", "background.js"]
   },
