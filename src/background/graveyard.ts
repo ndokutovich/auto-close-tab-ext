@@ -1,6 +1,7 @@
 import browser from 'webextension-polyfill';
 import type { GraveyardEntry } from '../shared/types';
 import { addToGraveyard, getGraveyard, removeFromGraveyard, clearGraveyard as storageClearGraveyard } from '../shared/storage';
+import { stripAgingPrefix } from '../shared/pure';
 
 export async function buryTab(
   tab: browser.Tabs.Tab,
@@ -8,7 +9,7 @@ export async function buryTab(
 ): Promise<void> {
   const entry: GraveyardEntry = {
     url: tab.url || '',
-    title: tab.title || 'Untitled',
+    title: stripAgingPrefix(tab.title || 'Untitled'),
     faviconUrl: tab.favIconUrl || '',
     closedAt: Date.now(),
     domain: extractDomain(tab.url),

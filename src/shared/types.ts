@@ -7,6 +7,7 @@ export interface Settings {
   timeoutMinutes: number;
   faviconDimming: boolean;
   titlePrefix: boolean;
+  closeEmptyTabs: boolean;
   graveyardMaxSize: number;
   minTabCount: number;
   whitelistedDomains: string[];

@@ -4,13 +4,50 @@
   box-sizing: border-box;
 }
 
+/* --- Theme tokens --- */
+:root {
+  --bg: #ffffff;
+  --bg-subtle: #f4f4f5;
+  --bg-hover: #e4e4e7;
+  --border: #d4d4d8;
+  --text: #18181b;
+  --text-heading: #09090b;
+  --text-muted: #71717a;
+  --text-faint: #a1a1aa;
+  --input-bg: #f4f4f5;
+  --input-border: #d4d4d8;
+  --input-focus: #a1a1aa;
+  --danger: #ef4444;
+  --badge-bg: #71717a;
+  --scrollbar: #d4d4d8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #18181b;
+    --bg-subtle: #27272a;
+    --bg-hover: #27272a;
+    --border: #27272a;
+    --text: #e4e4e7;
+    --text-heading: #fafafa;
+    --text-muted: #71717a;
+    --text-faint: #52525b;
+    --input-bg: #27272a;
+    --input-border: #3f3f46;
+    --input-focus: #52525b;
+    --danger: #ef4444;
+    --badge-bg: #6b7280;
+    --scrollbar: #3f3f46;
+  }
+}
+
 body {
   width: 380px;
   max-height: 500px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 13px;
-  color: #e4e4e7;
-  background: #18181b;
+  color: var(--text);
+  background: var(--bg);
 }
 
 .popup {
@@ -24,19 +61,19 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px 8px;
-  border-bottom: 1px solid #27272a;
+  border-bottom: 1px solid var(--border);
 }
 
 .title {
   font-size: 15px;
   font-weight: 600;
-  color: #fafafa;
+  color: var(--text-heading);
 }
 
 .btn-icon {
   background: none;
   border: none;
-  color: #a1a1aa;
+  color: var(--text-muted);
   font-size: 18px;
   cursor: pointer;
   padding: 4px;
@@ -44,8 +81,8 @@ body {
 }
 
 .btn-icon:hover {
-  background: #27272a;
-  color: #fafafa;
+  background: var(--bg-hover);
+  color: var(--text-heading);
 }
 
 .search-bar {
@@ -55,20 +92,20 @@ body {
 .search-bar input {
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid #3f3f46;
+  border: 1px solid var(--input-border);
   border-radius: 6px;
-  background: #27272a;
-  color: #fafafa;
+  background: var(--input-bg);
+  color: var(--text-heading);
   font-size: 13px;
   outline: none;
 }
 
 .search-bar input::placeholder {
-  color: #71717a;
+  color: var(--text-muted);
 }
 
 .search-bar input:focus {
-  border-color: #52525b;
+  border-color: var(--input-focus);
 }
 
 .graveyard-list {
@@ -89,7 +126,7 @@ body {
 }
 
 .graveyard-item:hover {
-  background: #27272a;
+  background: var(--bg-hover);
 }
 
 .graveyard-item .favicon {
@@ -107,7 +144,7 @@ body {
 .graveyard-item .tab-title {
   display: block;
   font-size: 13px;
-  color: #e4e4e7;
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -116,7 +153,7 @@ body {
 .graveyard-item .tab-domain {
   display: block;
   font-size: 11px;
-  color: #71717a;
+  color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -124,7 +161,7 @@ body {
 
 .graveyard-item .tab-time {
   font-size: 11px;
-  color: #52525b;
+  color: var(--text-faint);
   flex-shrink: 0;
   white-space: nowrap;
 }
@@ -132,7 +169,7 @@ body {
 .graveyard-item .btn-remove {
   background: none;
   border: none;
-  color: #52525b;
+  color: var(--text-faint);
   font-size: 14px;
   cursor: pointer;
   padding: 2px 4px;
@@ -146,14 +183,14 @@ body {
 }
 
 .graveyard-item .btn-remove:hover {
-  color: #ef4444;
-  background: #27272a;
+  color: var(--danger);
+  background: var(--bg-hover);
 }
 
 .empty-state {
   text-align: center;
   padding: 40px 16px;
-  color: #52525b;
+  color: var(--text-faint);
   font-size: 13px;
 }
 
@@ -162,18 +199,18 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 8px 16px 12px;
-  border-top: 1px solid #27272a;
+  border-top: 1px solid var(--border);
 }
 
 .count {
   font-size: 12px;
-  color: #71717a;
+  color: var(--text-muted);
 }
 
 .btn-text {
   background: none;
   border: none;
-  color: #71717a;
+  color: var(--text-muted);
   font-size: 12px;
   cursor: pointer;
   padding: 4px 8px;
@@ -181,8 +218,8 @@ body {
 }
 
 .btn-text:hover {
-  color: #ef4444;
-  background: #27272a;
+  color: var(--danger);
+  background: var(--bg-hover);
 }
 
 /* Scrollbar */
@@ -195,6 +232,6 @@ body {
 }
 
 .graveyard-list::-webkit-scrollbar-thumb {
-  background: #3f3f46;
+  background: var(--scrollbar);
   border-radius: 3px;
 }

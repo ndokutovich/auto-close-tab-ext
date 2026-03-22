@@ -46,6 +46,12 @@ export function isImmune(
     }
   }
 
+  // Empty/new tabs — close them if setting is on (skip restricted URL protection)
+  const emptyUrls = ['about:blank', 'about:newtab', 'chrome://newtab/'];
+  if (tab.url && emptyUrls.includes(tab.url)) {
+    return !ctx.settings.closeEmptyTabs;
+  }
+
   // Restricted URLs that we can't control — protect them since user can't recover context
   if (tab.url) {
     const restricted = ['chrome://', 'about:', 'chrome-extension://', 'moz-extension://'];

@@ -4,6 +4,7 @@ export const DEFAULT_SETTINGS: Settings = {
   timeoutMinutes: 30,
   faviconDimming: true,
   titlePrefix: false,
+  closeEmptyTabs: true,
   graveyardMaxSize: 200,
   minTabCount: 3,
   whitelistedDomains: [],

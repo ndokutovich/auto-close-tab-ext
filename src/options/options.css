@@ -4,11 +4,60 @@
   box-sizing: border-box;
 }
 
+/* --- Theme tokens --- */
+:root {
+  --bg-page: #ffffff;
+  --bg: #f4f4f5;
+  --bg-subtle: #e4e4e7;
+  --bg-hover: #e4e4e7;
+  --border: #d4d4d8;
+  --text: #18181b;
+  --text-heading: #09090b;
+  --text-muted: #71717a;
+  --text-faint: #a1a1aa;
+  --input-bg: #f4f4f5;
+  --input-border: #d4d4d8;
+  --input-focus: #a1a1aa;
+  --toggle-bg: #d4d4d8;
+  --toggle-knob: #ffffff;
+  --toggle-active: #3b82f6;
+  --btn-primary: #3b82f6;
+  --btn-primary-hover: #2563eb;
+  --danger: #ef4444;
+  --success: #16a34a;
+  --scrollbar: #d4d4d8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-page: #09090b;
+    --bg: #18181b;
+    --bg-subtle: #27272a;
+    --bg-hover: #27272a;
+    --border: #27272a;
+    --text: #e4e4e7;
+    --text-heading: #fafafa;
+    --text-muted: #71717a;
+    --text-faint: #52525b;
+    --input-bg: #27272a;
+    --input-border: #3f3f46;
+    --input-focus: #52525b;
+    --toggle-bg: #3f3f46;
+    --toggle-knob: #fafafa;
+    --toggle-active: #3b82f6;
+    --btn-primary: #3b82f6;
+    --btn-primary-hover: #2563eb;
+    --danger: #ef4444;
+    --success: #22c55e;
+    --scrollbar: #3f3f46;
+  }
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 14px;
-  color: #e4e4e7;
-  background: #09090b;
+  color: var(--text);
+  background: var(--bg-page);
   line-height: 1.5;
 }
 
@@ -25,11 +74,11 @@ header {
 header h1 {
   font-size: 24px;
   font-weight: 700;
-  color: #fafafa;
+  color: var(--text-heading);
 }
 
 .subtitle {
-  color: #71717a;
+  color: var(--text-muted);
   font-size: 14px;
   margin-top: 4px;
 }
@@ -37,15 +86,15 @@ header h1 {
 .section {
   margin-bottom: 32px;
   padding: 20px;
-  background: #18181b;
-  border: 1px solid #27272a;
+  background: var(--bg);
+  border: 1px solid var(--border);
   border-radius: 8px;
 }
 
 .section h2 {
   font-size: 16px;
   font-weight: 600;
-  color: #fafafa;
+  color: var(--text-heading);
   margin-bottom: 16px;
 }
 
@@ -60,13 +109,13 @@ header h1 {
 .field label {
   display: block;
   font-size: 14px;
-  color: #e4e4e7;
+  color: var(--text);
   margin-bottom: 4px;
 }
 
 .hint {
   font-size: 12px;
-  color: #71717a;
+  color: var(--text-muted);
   margin-bottom: 8px;
 }
 
@@ -79,20 +128,20 @@ header h1 {
 .input-group input {
   width: 100px;
   padding: 8px 12px;
-  border: 1px solid #3f3f46;
+  border: 1px solid var(--input-border);
   border-radius: 6px;
-  background: #27272a;
-  color: #fafafa;
+  background: var(--input-bg);
+  color: var(--text-heading);
   font-size: 14px;
   outline: none;
 }
 
 .input-group input:focus {
-  border-color: #52525b;
+  border-color: var(--input-focus);
 }
 
 .unit {
-  color: #71717a;
+  color: var(--text-muted);
   font-size: 13px;
 }
 
@@ -122,7 +171,7 @@ header h1 {
   width: 40px;
   height: 22px;
   appearance: none;
-  background: #3f3f46;
+  background: var(--toggle-bg);
   border-radius: 11px;
   position: relative;
   cursor: pointer;
@@ -136,13 +185,13 @@ header h1 {
   left: 3px;
   width: 16px;
   height: 16px;
-  background: #fafafa;
+  background: var(--toggle-knob);
   border-radius: 50%;
   transition: transform 0.2s;
 }
 
 .toggle input[type="checkbox"]:checked {
-  background: #3b82f6;
+  background: var(--toggle-active);
 }
 
 .toggle input[type="checkbox"]:checked::after {
@@ -152,10 +201,10 @@ header h1 {
 textarea {
   width: 100%;
   padding: 12px;
-  border: 1px solid #3f3f46;
+  border: 1px solid var(--input-border);
   border-radius: 6px;
-  background: #27272a;
-  color: #fafafa;
+  background: var(--input-bg);
+  color: var(--text-heading);
   font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: 13px;
   resize: vertical;
@@ -164,11 +213,11 @@ textarea {
 }
 
 textarea::placeholder {
-  color: #52525b;
+  color: var(--text-faint);
 }
 
 textarea:focus {
-  border-color: #52525b;
+  border-color: var(--input-focus);
 }
 
 /* Graveyard in options */
@@ -196,7 +245,7 @@ textarea:focus {
 }
 
 .graveyard-item:hover {
-  background: #27272a;
+  background: var(--bg-hover);
 }
 
 .graveyard-item .favicon {
@@ -213,7 +262,7 @@ textarea:focus {
 .graveyard-item .tab-title {
   display: block;
   font-size: 13px;
-  color: #e4e4e7;
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -222,19 +271,19 @@ textarea:focus {
 .graveyard-item .tab-domain {
   display: block;
   font-size: 11px;
-  color: #71717a;
+  color: var(--text-muted);
 }
 
 .graveyard-item .tab-time {
   font-size: 11px;
-  color: #52525b;
+  color: var(--text-faint);
   flex-shrink: 0;
 }
 
 /* Buttons */
 .btn-primary {
   padding: 8px 20px;
-  background: #3b82f6;
+  background: var(--btn-primary);
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -245,22 +294,22 @@ textarea:focus {
 }
 
 .btn-primary:hover {
-  background: #2563eb;
+  background: var(--btn-primary-hover);
 }
 
 .btn-danger {
   padding: 6px 12px;
   background: none;
-  color: #71717a;
-  border: 1px solid #3f3f46;
+  color: var(--text-muted);
+  border: 1px solid var(--input-border);
   border-radius: 6px;
   font-size: 12px;
   cursor: pointer;
 }
 
 .btn-danger:hover {
-  color: #ef4444;
-  border-color: #ef4444;
+  color: var(--danger);
+  border-color: var(--danger);
 }
 
 .save-bar {
@@ -273,13 +322,13 @@ textarea:focus {
   justify-content: flex-end;
   gap: 12px;
   padding: 16px 24px;
-  background: #18181b;
-  border-top: 1px solid #27272a;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
 }
 
 .save-status {
   font-size: 13px;
-  color: #22c55e;
+  color: var(--success);
 }
 
 /* Scrollbar */
@@ -288,6 +337,6 @@ textarea:focus {
 }
 
 .graveyard-list::-webkit-scrollbar-thumb {
-  background: #3f3f46;
+  background: var(--scrollbar);
   border-radius: 3px;
 }

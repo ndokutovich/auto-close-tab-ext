@@ -3,6 +3,7 @@ import type { Settings, GraveyardEntry } from '../shared/types';
 
 const timeoutInput = document.getElementById('timeout') as HTMLInputElement;
 const minTabsInput = document.getElementById('minTabs') as HTMLInputElement;
+const closeEmptyToggle = document.getElementById('closeEmptyTabs') as HTMLInputElement;
 const faviconToggle = document.getElementById('faviconDimming') as HTMLInputElement;
 const titleToggle = document.getElementById('titlePrefix') as HTMLInputElement;
 const whitelistArea = document.getElementById('whitelist') as HTMLTextAreaElement;
@@ -18,6 +19,7 @@ async function loadSettings(): Promise<void> {
 
   timeoutInput.value = String(settings.timeoutMinutes);
   minTabsInput.value = String(settings.minTabCount);
+  closeEmptyToggle.checked = settings.closeEmptyTabs;
   faviconToggle.checked = settings.faviconDimming;
   titleToggle.checked = settings.titlePrefix;
   whitelistArea.value = settings.whitelistedDomains.join('\n');
@@ -33,6 +35,7 @@ async function saveSettings(): Promise<void> {
   const settings: Partial<Settings> = {
     timeoutMinutes: Math.max(1, Number(timeoutInput.value) || 30),
     minTabCount: Math.max(1, Number(minTabsInput.value) || 3),
+    closeEmptyTabs: closeEmptyToggle.checked,
     faviconDimming: faviconToggle.checked,
     titlePrefix: titleToggle.checked,
     whitelistedDomains: domains,
