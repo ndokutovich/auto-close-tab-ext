@@ -3,7 +3,8 @@ import type { BgToContentMsg, ContentToBgMsg } from '../shared/types';
 import { handleFaviconAging, resetFavicon } from './favicon-aging';
 import { handleTitleAging, resetTitle } from './title-aging';
 
-browser.runtime.onMessage.addListener((message: BgToContentMsg) => {
+browser.runtime.onMessage.addListener((rawMessage: unknown) => {
+  const message = rawMessage as BgToContentMsg;
   switch (message.type) {
     case 'UPDATE_AGING':
       handleFaviconAging(message.stage, message.timeRemainingMs);

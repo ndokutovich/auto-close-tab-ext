@@ -42,15 +42,16 @@ function isAllowedFaviconUrl(url: string): boolean {
 
 export function setupMessageListener(): void {
   browser.runtime.onMessage.addListener(
-    (message: ExtensionMessage, sender): Promise<any> | undefined => {
-      switch (message.type) {
+    (message: unknown, sender: browser.Runtime.MessageSender): Promise<any> | undefined => {
+      const msg = message as ExtensionMessage;
+      switch (msg.type) {
         // --- Content script messages (any sender) ---
 
         case 'CONTENT_READY':
           return undefined;
 
         case 'FETCH_FAVICON_REQUEST': {
-          const { url, requestId } = message;
+          const { url, requestId } = msg;
           if (!isAllowedFaviconUrl(url)) {
             return Promise.resolve({ ok: false });
           }
@@ -98,11 +99,11 @@ export function setupMessageListener(): void {
 
         case 'RESTORE_TAB':
           if (!isExtensionSender(sender)) return Promise.resolve({ ok: false });
-          return restoreTab(message.url).then(() => ({ ok: true }));
+          return restoreTab(msg.url).then(() => ({ ok: true }));
 
         case 'REMOVE_GRAVEYARD_ENTRY':
           if (!isExtensionSender(sender)) return Promise.resolve({ ok: false });
-          return removeEntry(message.closedAt).then(() => ({ ok: true }));
+          return removeEntry(msg.closedAt).then(() => ({ ok: true }));
 
         case 'CLEAR_GRAVEYARD':
           if (!isExtensionSender(sender)) return Promise.resolve({ ok: false });
@@ -110,7 +111,7 @@ export function setupMessageListener(): void {
 
         case 'SAVE_SETTINGS':
           if (!isExtensionSender(sender)) return Promise.resolve({ ok: false });
-          return saveSettings(message.settings);
+          return saveSettings(msg.settings);
 
         default:
           return undefined;

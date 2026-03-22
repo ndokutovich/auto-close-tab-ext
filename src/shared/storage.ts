@@ -6,8 +6,13 @@ import { capGraveyard } from './pure';
 // --- Settings ---
 
 export async function getSettings(): Promise<Settings> {
-  const result = await browser.storage.local.get(STORAGE_KEYS.SETTINGS);
-  return { ...DEFAULT_SETTINGS, ...result[STORAGE_KEYS.SETTINGS] };
+  try {
+    const result = await browser.storage.local.get(STORAGE_KEYS.SETTINGS);
+    const stored = result[STORAGE_KEYS.SETTINGS] as Partial<Settings> | undefined;
+    return { ...DEFAULT_SETTINGS, ...stored };
+  } catch {
+    return { ...DEFAULT_SETTINGS };
+  }
 }
 
 export async function saveSettings(partial: Partial<Settings>): Promise<Settings> {
@@ -35,8 +40,12 @@ export async function saveSettings(partial: Partial<Settings>): Promise<Settings
 // --- Tab times ---
 
 export async function getTabTimes(): Promise<Record<number, number>> {
-  const result = await browser.storage.local.get(STORAGE_KEYS.TAB_TIMES);
-  return result[STORAGE_KEYS.TAB_TIMES] || {};
+  try {
+    const result = await browser.storage.local.get(STORAGE_KEYS.TAB_TIMES);
+    return (result[STORAGE_KEYS.TAB_TIMES] as Record<number, number> | undefined) ?? {};
+  } catch {
+    return {};
+  }
 }
 
 export async function setTabTimes(times: Record<number, number>): Promise<void> {
@@ -46,8 +55,12 @@ export async function setTabTimes(times: Record<number, number>): Promise<void> 
 // --- Tab stages ---
 
 export async function getTabStages(): Promise<Record<number, AgingStage>> {
-  const result = await browser.storage.local.get(STORAGE_KEYS.TAB_STAGES);
-  return result[STORAGE_KEYS.TAB_STAGES] || {};
+  try {
+    const result = await browser.storage.local.get(STORAGE_KEYS.TAB_STAGES);
+    return (result[STORAGE_KEYS.TAB_STAGES] as Record<number, AgingStage> | undefined) ?? {};
+  } catch {
+    return {};
+  }
 }
 
 export async function setTabStages(stages: Record<number, AgingStage>): Promise<void> {
@@ -57,8 +70,13 @@ export async function setTabStages(stages: Record<number, AgingStage>): Promise<
 // --- Graveyard ---
 
 export async function getGraveyard(): Promise<GraveyardEntry[]> {
-  const result = await browser.storage.local.get(STORAGE_KEYS.GRAVEYARD);
-  return result[STORAGE_KEYS.GRAVEYARD] || [];
+  try {
+    const result = await browser.storage.local.get(STORAGE_KEYS.GRAVEYARD);
+    const data = result[STORAGE_KEYS.GRAVEYARD];
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
 }
 
 export async function addToGraveyard(entry: GraveyardEntry, maxSize: number): Promise<GraveyardEntry[]> {
