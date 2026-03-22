@@ -1,0 +1,63 @@
+{
+  "extName": { "message": "Aging Tabs" },
+  "extDescription": { "message": "Auto-close inactive tabs with visual aging feedback and a searchable graveyard" },
+
+  "popupTitle": { "message": "Aging Tabs" },
+  "searchPlaceholder": { "message": "Search closed tabs..." },
+  "sortRecent": { "message": "Recent" },
+  "sortDomain": { "message": "By domain" },
+  "sortAlpha": { "message": "A-Z" },
+  "noClosedTabs": { "message": "No closed tabs yet" },
+  "tabCount": { "message": "$count$ tab$plural$", "placeholders": { "count": { "content": "$1" }, "plural": { "content": "$2" } } },
+  "clearAll": { "message": "Clear all" },
+  "removeFromList": { "message": "Remove from list" },
+
+  "optionsTitle": { "message": "Aging Tabs" },
+  "optionsSubtitle": { "message": "Configure auto-close behavior and visual aging" },
+
+  "sectionTimer": { "message": "Timer" },
+  "labelTimeout": { "message": "Close tabs inactive for" },
+  "unitMinutes": { "message": "minutes" },
+  "labelMinTabs": { "message": "Keep at least" },
+  "unitTabsOpen": { "message": "tabs open" },
+  "labelExpireAction": { "message": "When tab expires" },
+  "expireClose": { "message": "Close tab (save to graveyard)" },
+  "expireDiscard": { "message": "Discard tab (unload from memory)" },
+
+  "sectionBehavior": { "message": "Behavior" },
+  "labelCloseEmpty": { "message": "Close empty tabs" },
+  "hintCloseEmpty": { "message": "Auto-close about:blank and new tab pages when inactive" },
+  "labelProtectGroups": { "message": "Protect grouped tabs" },
+  "hintProtectGroups": { "message": "Tabs in a group are immune to auto-close (Firefox 138+ / Chrome)" },
+
+  "sectionVisual": { "message": "Visual Aging" },
+  "labelFavicon": { "message": "Favicon dimming" },
+  "hintFavicon": { "message": "Progressively desaturate favicons as tabs age" },
+  "labelTitlePrefix": { "message": "Title prefix" },
+  "hintTitlePrefix": { "message": "Add emoji indicators to tab titles (may conflict with some SPAs)" },
+
+  "sectionWhitelist": { "message": "Domain Whitelist" },
+  "hintWhitelist": { "message": "Tabs from these domains will never be auto-closed (one per line)" },
+
+  "sectionGraveyard": { "message": "Graveyard" },
+  "labelMaxTabs": { "message": "Maximum saved tabs" },
+  "unitTabs": { "message": "tabs" },
+  "graveyardCount": { "message": "$count$ tab$plural$ in graveyard", "placeholders": { "count": { "content": "$1" }, "plural": { "content": "$2" } } },
+  "btnExport": { "message": "Export" },
+  "btnImport": { "message": "Import" },
+  "btnSave": { "message": "Save settings" },
+  "statusSaved": { "message": "Saved" },
+  "statusImported": { "message": "Imported" },
+  "statusImportFailed": { "message": "Import failed" },
+
+  "menuLockTab": { "message": "Lock tab (prevent auto-close)" },
+  "menuUnlockTab": { "message": "Unlock tab (allow auto-close)" },
+  "cmdLockTab": { "message": "Lock/unlock current tab (prevent auto-close)" },
+
+  "notifTabClosed": { "message": "Tab closed" },
+
+  "timeJustNow": { "message": "just now" },
+  "timeMinutesAgo": { "message": "$n$m ago", "placeholders": { "n": { "content": "$1" } } },
+  "timeHoursAgo": { "message": "$n$h ago", "placeholders": { "n": { "content": "$1" } } },
+  "timeDaysAgo": { "message": "$n$d ago", "placeholders": { "n": { "content": "$1" } } }
+}

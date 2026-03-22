@@ -2,6 +2,7 @@ import browser from 'webextension-polyfill';
 import type { AgingStage, BgToContentMsg } from '../shared/types';
 import { ALARM_NAME, CHECK_INTERVAL_SECONDS } from '../shared/constants';
 import { computeAgingStage, extractDomain } from '../shared/pure';
+import { msg } from '../shared/i18n';
 import { getSettings, getGraveyard, getLockedTabs } from '../shared/storage';
 import {
   ensureLoaded,
@@ -113,7 +114,7 @@ function showCloseNotification(tab: browser.Tabs.Tab): void {
   browser.notifications.create(notifId, {
     type: 'basic',
     iconUrl: browser.runtime.getURL('icons/icon-128.svg'),
-    title: 'Tab closed',
+    title: msg('notifTabClosed'),
     message: domain ? `${title} (${domain})` : title,
   }).catch((err: unknown) => {
     console.warn('[Aging Tabs] Notification failed:', err);

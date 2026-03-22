@@ -2,6 +2,9 @@ import browser from 'webextension-polyfill';
 import type { GraveyardEntry } from '../shared/types';
 import { formatTime, defaultFavicon, sortGraveyard, type GraveyardSortMode } from '../shared/pure';
 import { FALLBACK_FAVICON } from '../shared/constants';
+import { msg, applyI18n } from '../shared/i18n';
+
+applyI18n();
 
 const searchInput = document.getElementById('search') as HTMLInputElement;
 const sortSelect = document.getElementById('sort-mode') as HTMLSelectElement;
@@ -76,7 +79,8 @@ function createEntryElement(entry: GraveyardEntry): HTMLElement {
 }
 
 function render(entries: GraveyardEntry[]): void {
-  countEl.textContent = `${entries.length} tab${entries.length !== 1 ? 's' : ''}`;
+  const plural = entries.length !== 1 ? 's' : '';
+  countEl.textContent = msg('tabCount', String(entries.length), plural);
 
   while (listEl.firstChild) {
     listEl.removeChild(listEl.firstChild);
@@ -85,7 +89,7 @@ function render(entries: GraveyardEntry[]): void {
   if (entries.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'empty-state';
-    empty.textContent = 'No closed tabs yet';
+    empty.textContent = msg('noClosedTabs');
     listEl.appendChild(empty);
     return;
   }

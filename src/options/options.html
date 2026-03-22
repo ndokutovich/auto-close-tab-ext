@@ -3,82 +3,82 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aging Tabs — Settings</title>
+  <title>Aging Tabs</title>
   <link rel="stylesheet" href="options.css">
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>Aging Tabs</h1>
-      <p class="subtitle">Configure auto-close behavior and visual aging</p>
+      <h1 data-i18n="optionsTitle">Aging Tabs</h1>
+      <p class="subtitle" data-i18n="optionsSubtitle">Configure auto-close behavior and visual aging</p>
     </header>
 
     <section class="section">
-      <h2>Timer</h2>
+      <h2 data-i18n="sectionTimer">Timer</h2>
       <div class="field">
-        <label for="timeout">Close tabs inactive for</label>
+        <label for="timeout" data-i18n="labelTimeout">Close tabs inactive for</label>
         <div class="input-group">
           <input type="number" id="timeout" min="1" max="1440" step="1">
-          <span class="unit">minutes</span>
+          <span class="unit" data-i18n="unitMinutes">minutes</span>
         </div>
       </div>
       <div class="field">
-        <label for="minTabs">Keep at least</label>
+        <label for="minTabs" data-i18n="labelMinTabs">Keep at least</label>
         <div class="input-group">
           <input type="number" id="minTabs" min="1" max="100" step="1">
-          <span class="unit">tabs open</span>
+          <span class="unit" data-i18n="unitTabsOpen">tabs open</span>
         </div>
       </div>
       <div class="field">
-        <label for="expireAction">When tab expires</label>
+        <label for="expireAction" data-i18n="labelExpireAction">When tab expires</label>
         <select id="expireAction" class="select-field">
-          <option value="close">Close tab (save to graveyard)</option>
-          <option value="discard">Discard tab (unload from memory)</option>
+          <option value="close" data-i18n="expireClose">Close tab (save to graveyard)</option>
+          <option value="discard" data-i18n="expireDiscard">Discard tab (unload from memory)</option>
         </select>
       </div>
     </section>
 
     <section class="section">
-      <h2>Behavior</h2>
+      <h2 data-i18n="sectionBehavior">Behavior</h2>
       <div class="field toggle">
-        <label for="closeEmptyTabs">Close empty tabs</label>
-        <p class="hint">Auto-close about:blank and new tab pages when inactive</p>
+        <label for="closeEmptyTabs" data-i18n="labelCloseEmpty">Close empty tabs</label>
+        <p class="hint" data-i18n="hintCloseEmpty">Auto-close about:blank and new tab pages when inactive</p>
         <input type="checkbox" id="closeEmptyTabs">
       </div>
       <div class="field toggle">
-        <label for="protectGroupedTabs">Protect grouped tabs</label>
-        <p class="hint">Tabs in a group are immune to auto-close (Firefox 138+ / Chrome)</p>
+        <label for="protectGroupedTabs" data-i18n="labelProtectGroups">Protect grouped tabs</label>
+        <p class="hint" data-i18n="hintProtectGroups">Tabs in a group are immune to auto-close (Firefox 138+ / Chrome)</p>
         <input type="checkbox" id="protectGroupedTabs">
       </div>
     </section>
 
     <section class="section">
-      <h2>Visual Aging</h2>
+      <h2 data-i18n="sectionVisual">Visual Aging</h2>
       <div class="field toggle">
-        <label for="faviconDimming">Favicon dimming</label>
-        <p class="hint">Progressively desaturate favicons as tabs age</p>
+        <label for="faviconDimming" data-i18n="labelFavicon">Favicon dimming</label>
+        <p class="hint" data-i18n="hintFavicon">Progressively desaturate favicons as tabs age</p>
         <input type="checkbox" id="faviconDimming">
       </div>
       <div class="field toggle">
-        <label for="titlePrefix">Title prefix</label>
-        <p class="hint">Add emoji indicators to tab titles (may conflict with some SPAs)</p>
+        <label for="titlePrefix" data-i18n="labelTitlePrefix">Title prefix</label>
+        <p class="hint" data-i18n="hintTitlePrefix">Add emoji indicators to tab titles (may conflict with some SPAs)</p>
         <input type="checkbox" id="titlePrefix">
       </div>
     </section>
 
     <section class="section">
-      <h2>Domain Whitelist</h2>
-      <p class="hint">Tabs from these domains will never be auto-closed (one per line)</p>
+      <h2 data-i18n="sectionWhitelist">Domain Whitelist</h2>
+      <p class="hint" data-i18n="hintWhitelist">Tabs from these domains will never be auto-closed (one per line)</p>
       <textarea id="whitelist" rows="6" placeholder="github.com&#10;docs.google.com&#10;localhost"></textarea>
     </section>
 
     <section class="section">
-      <h2>Graveyard</h2>
+      <h2 data-i18n="sectionGraveyard">Graveyard</h2>
       <div class="field">
-        <label for="graveyardSize">Maximum saved tabs</label>
+        <label for="graveyardSize" data-i18n="labelMaxTabs">Maximum saved tabs</label>
         <div class="input-group">
           <input type="number" id="graveyardSize" min="10" max="1000" step="10">
-          <span class="unit">tabs</span>
+          <span class="unit" data-i18n="unitTabs">tabs</span>
         </div>
       </div>
 
@@ -86,12 +86,12 @@
         <div class="graveyard-header">
           <span id="graveyard-count">0 tabs in graveyard</span>
           <div class="graveyard-actions">
-            <button id="btn-export" class="btn-secondary">Export</button>
+            <button id="btn-export" class="btn-secondary" data-i18n="btnExport">Export</button>
             <label class="btn-secondary btn-file">
-              Import
+              <span data-i18n="btnImport">Import</span>
               <input type="file" id="btn-import" accept=".json" hidden>
             </label>
-            <button id="btn-clear" class="btn-danger">Clear all</button>
+            <button id="btn-clear" class="btn-danger" data-i18n="clearAll">Clear all</button>
           </div>
         </div>
         <div id="graveyard-list" class="graveyard-list"></div>
@@ -100,7 +100,7 @@
 
     <div class="save-bar">
       <span id="save-status" class="save-status"></span>
-      <button id="btn-save" class="btn-primary">Save settings</button>
+      <button id="btn-save" class="btn-primary" data-i18n="btnSave">Save settings</button>
     </div>
   </div>
 

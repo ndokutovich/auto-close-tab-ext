@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Aging Tabs",
+  "name": "__MSG_extName__",
   "version": "1.0.0",
-  "description": "Auto-close inactive tabs with visual aging feedback and a searchable graveyard",
+  "description": "__MSG_extDescription__",
+  "default_locale": "en",
   "permissions": ["tabs", "alarms", "storage", "scripting", "notifications", "idle", "contextMenus"],
   "host_permissions": ["<all_urls>"],
   "content_security_policy": {
@@ -38,7 +39,7 @@
   "commands": {
     "lock-current-tab": {
       "suggested_key": { "default": "Alt+L" },
-      "description": "Lock/unlock current tab (prevent auto-close)"
+      "description": "__MSG_cmdLockTab__"
     }
   }
 }

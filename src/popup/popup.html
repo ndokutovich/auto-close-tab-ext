@@ -8,26 +8,26 @@
 <body>
   <div class="popup">
     <header class="header">
-      <h1 class="title">Aging Tabs</h1>
+      <h1 class="title" data-i18n="popupTitle">Aging Tabs</h1>
       <button id="btn-options" class="btn-icon" title="Settings">&#9881;</button>
     </header>
 
     <div class="search-bar">
-      <input type="text" id="search" placeholder="Search closed tabs..." autocomplete="off">
+      <input type="text" id="search" data-i18n-placeholder="searchPlaceholder" placeholder="Search closed tabs..." autocomplete="off">
       <select id="sort-mode" class="sort-select">
-        <option value="recent">Recent</option>
-        <option value="domain">By domain</option>
-        <option value="alpha">A-Z</option>
+        <option value="recent" data-i18n="sortRecent">Recent</option>
+        <option value="domain" data-i18n="sortDomain">By domain</option>
+        <option value="alpha" data-i18n="sortAlpha">A-Z</option>
       </select>
     </div>
 
     <div id="graveyard-list" class="graveyard-list">
-      <div class="empty-state">No closed tabs yet</div>
+      <div class="empty-state" data-i18n="noClosedTabs">No closed tabs yet</div>
     </div>
 
     <footer class="footer">
       <span id="graveyard-count" class="count">0 tabs</span>
-      <button id="btn-clear" class="btn-text" title="Clear all">Clear all</button>
+      <button id="btn-clear" class="btn-text" data-i18n="clearAll">Clear all</button>
     </footer>
   </div>
 

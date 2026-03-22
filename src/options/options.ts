@@ -2,6 +2,9 @@ import browser from 'webextension-polyfill';
 import type { Settings, GraveyardEntry } from '../shared/types';
 import { formatTime, defaultFavicon } from '../shared/pure';
 import { FALLBACK_FAVICON } from '../shared/constants';
+import { msg, applyI18n } from '../shared/i18n';
+
+applyI18n();
 
 const timeoutInput = document.getElementById('timeout') as HTMLInputElement;
 const minTabsInput = document.getElementById('minTabs') as HTMLInputElement;
@@ -54,13 +57,14 @@ async function saveSettings(): Promise<void> {
 
   await browser.runtime.sendMessage({ type: 'SAVE_SETTINGS', settings });
 
-  saveStatusEl.textContent = 'Saved';
+  saveStatusEl.textContent = msg('statusSaved');
   setTimeout(() => { saveStatusEl.textContent = ''; }, 2000);
 }
 
 async function loadGraveyard(): Promise<void> {
   const entries: GraveyardEntry[] = await browser.runtime.sendMessage({ type: 'GET_GRAVEYARD' }) || [];
-  graveyardCountEl.textContent = `${entries.length} tab${entries.length !== 1 ? 's' : ''} in graveyard`;
+  const plural = entries.length !== 1 ? 's' : '';
+  graveyardCountEl.textContent = msg('graveyardCount', String(entries.length), plural);
 
   while (graveyardListEl.firstChild) {
     graveyardListEl.removeChild(graveyardListEl.firstChild);
@@ -132,10 +136,10 @@ async function importDataFromFile(file: File): Promise<void> {
     await browser.runtime.sendMessage({ type: 'IMPORT_DATA', data: text });
     await loadSettings();
     await loadGraveyard();
-    saveStatusEl.textContent = 'Imported';
+    saveStatusEl.textContent = msg('statusImported');
     setTimeout(() => { saveStatusEl.textContent = ''; }, 2000);
   } catch {
-    saveStatusEl.textContent = 'Import failed';
+    saveStatusEl.textContent = msg('statusImportFailed');
     setTimeout(() => { saveStatusEl.textContent = ''; }, 3000);
   }
 }

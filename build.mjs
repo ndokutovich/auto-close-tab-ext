@@ -54,6 +54,12 @@ async function build(browser) {
     cpSync(iconsDir, resolve(outdir, 'icons'), { recursive: true });
   }
 
+  // Copy locales
+  const localesDir = resolve(__dirname, 'src/_locales');
+  if (existsSync(localesDir)) {
+    cpSync(localesDir, resolve(outdir, '_locales'), { recursive: true });
+  }
+
   // Copy webextension-polyfill
   const polyfillSrc = resolve(__dirname, 'node_modules/webextension-polyfill/dist/browser-polyfill.min.js');
   if (existsSync(polyfillSrc)) {

@@ -1,5 +1,6 @@
 import browser from 'webextension-polyfill';
 import { isTabLocked, lockTab, unlockTab } from '../shared/storage';
+import { msg } from '../shared/i18n';
 
 const MENU_ID = 'aging-tabs-lock-toggle';
 
@@ -7,7 +8,7 @@ export function setupContextMenu(): void {
   // Create the menu item once
   browser.contextMenus.create({
     id: MENU_ID,
-    title: 'Lock tab (prevent auto-close)',
+    title: msg('menuLockTab'),
     contexts: ['tab'],
   }, () => {
     // Ignore "already exists" error on re-init
@@ -20,7 +21,7 @@ export function setupContextMenu(): void {
       if (!tab?.id) return;
       const locked = await isTabLocked(tab.id);
       browser.contextMenus.update(MENU_ID, {
-        title: locked ? 'Unlock tab (allow auto-close)' : 'Lock tab (prevent auto-close)',
+        title: locked ? msg('menuUnlockTab') : msg('menuLockTab'),
       });
       browser.contextMenus.refresh();
     });
