@@ -38,12 +38,14 @@ async function injectContentScripts(): Promise<void> {
 }
 
 // Service worker / background script startup
-init();
+init().catch(err => console.error('[Aging Tabs] Init failed:', err));
 
 // Re-init on browser startup (restores state after restart)
-browser.runtime.onStartup.addListener(() => init());
+browser.runtime.onStartup.addListener(() => {
+  init().catch(err => console.error('[Aging Tabs] Startup init failed:', err));
+});
 
 // Handle extension install/update
 browser.runtime.onInstalled.addListener((details) => {
-  init(details.reason === 'install');
+  init(details.reason === 'install').catch(err => console.error('[Aging Tabs] Install init failed:', err));
 });

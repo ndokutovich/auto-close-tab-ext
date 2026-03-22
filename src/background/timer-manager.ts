@@ -107,10 +107,12 @@ function showCloseNotification(tab: browser.Tabs.Tab): void {
 
   browser.notifications.create(notifId, {
     type: 'basic',
-    iconUrl: browser.runtime.getURL('icons/icon-48.svg'),
+    iconUrl: browser.runtime.getURL('icons/icon-128.svg'),
     title: 'Tab closed',
     message: domain ? `${title} (${domain})` : title,
-  }).catch(() => {});
+  }).catch((err: unknown) => {
+    console.warn('[Aging Tabs] Notification failed:', err);
+  });
 
   setTimeout(() => {
     browser.notifications.clear(notifId).catch(() => {});
