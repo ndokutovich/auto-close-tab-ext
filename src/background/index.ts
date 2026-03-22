@@ -4,13 +4,13 @@ import { startTimer, onAlarmFired } from './timer-manager';
 import { setupMessageListener } from './messaging';
 import { syncBadge } from './graveyard';
 
-async function init(): Promise<void> {
-  await initTracker();
+async function init(freshInstall = false): Promise<void> {
+  await initTracker(freshInstall);
   setupTabListeners();
   setupMessageListener();
   await startTimer();
   await syncBadge();
-  console.log('[Aging Tabs] Background initialized');
+  console.log('[Aging Tabs] Background initialized', freshInstall ? '(fresh install — grace period active)' : '');
 }
 
 // Service worker / background script startup
@@ -27,7 +27,9 @@ browser.runtime.onStartup.addListener(async () => {
 // Handle extension install/update
 browser.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === 'install') {
-    console.log('[Aging Tabs] Extension installed');
+    console.log('[Aging Tabs] Fresh install — all existing tabs get a grace period');
+    await init(true);
+  } else {
+    await init();
   }
-  await init();
 });

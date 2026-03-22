@@ -7,7 +7,7 @@ let tabTimes: Record<number, number> = {};
 let tabStages: Record<number, AgingStage> = {};
 let initialized = false;
 
-export async function initTracker(): Promise<void> {
+export async function initTracker(freshInstall = false): Promise<void> {
   if (initialized) return;
 
   // Load persisted state
@@ -28,10 +28,20 @@ export async function initTracker(): Promise<void> {
   }
 
   // Add entries for tabs we don't know about
+  // On fresh install: reset ALL tabs to now (grace period — don't kill existing tabs)
   const now = Date.now();
-  for (const tab of tabs) {
-    if (tab.id !== undefined && !(tab.id in tabTimes)) {
-      tabTimes[tab.id] = tab.lastAccessed ?? now;
+  if (freshInstall) {
+    for (const tab of tabs) {
+      if (tab.id !== undefined) {
+        tabTimes[tab.id] = now;
+        tabStages[tab.id] = 0;
+      }
+    }
+  } else {
+    for (const tab of tabs) {
+      if (tab.id !== undefined && !(tab.id in tabTimes)) {
+        tabTimes[tab.id] = tab.lastAccessed ?? now;
+      }
     }
   }
 
