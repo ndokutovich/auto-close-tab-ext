@@ -1,3 +1,4 @@
+import browser from 'webextension-polyfill';
 import type { AgingStage } from '../shared/types';
 import { STAGE_GRAYSCALE } from '../shared/constants';
 
@@ -89,7 +90,6 @@ export function resetFavicon(): void {
 // Fallback: ask background to fetch cross-origin favicon
 async function requestFaviconViaBackground(url: string, percentage: number): Promise<void> {
   try {
-    const { default: browser } = await import('webextension-polyfill');
     const requestId = `${Date.now()}-${Math.random()}`;
 
     // Set up one-time listener for the response

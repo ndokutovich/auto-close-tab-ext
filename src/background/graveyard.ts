@@ -1,7 +1,7 @@
 import browser from 'webextension-polyfill';
 import type { GraveyardEntry } from '../shared/types';
 import { addToGraveyard, getGraveyard, removeFromGraveyard, clearGraveyard as storageClearGraveyard } from '../shared/storage';
-import { stripAgingPrefix } from '../shared/pure';
+import { stripAgingPrefix, extractDomain } from '../shared/pure';
 
 export async function buryTab(
   tab: browser.Tabs.Tab,
@@ -43,14 +43,5 @@ async function updateBadge(count: number): Promise<void> {
   await browser.action.setBadgeText({ text });
   if (count > 0) {
     await browser.action.setBadgeBackgroundColor({ color: '#6b7280' }); // gray-500
-  }
-}
-
-function extractDomain(url: string | undefined): string {
-  if (!url) return '';
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return '';
   }
 }

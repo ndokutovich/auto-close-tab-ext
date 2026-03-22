@@ -1,5 +1,6 @@
 import browser from 'webextension-polyfill';
 import type { Settings, GraveyardEntry } from '../shared/types';
+import { formatTime, defaultFavicon } from '../shared/pure';
 
 const timeoutInput = document.getElementById('timeout') as HTMLInputElement;
 const minTabsInput = document.getElementById('minTabs') as HTMLInputElement;
@@ -108,25 +109,6 @@ function createEntryElement(entry: GraveyardEntry): HTMLElement {
   });
 
   return item;
-}
-
-function defaultFavicon(url: string): string {
-  try {
-    return new URL(url).origin + '/favicon.ico';
-  } catch {
-    return '';
-  }
-}
-
-function formatTime(timestamp: number): string {
-  const diff = Date.now() - timestamp;
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
 }
 
 // --- Event handlers ---

@@ -2,10 +2,11 @@ import browser from 'webextension-polyfill';
 import type { AgingStage } from '../shared/types';
 import { getTabTimes, setTabTimes, getTabStages, setTabStages } from '../shared/storage';
 
-// In-memory cache, flushed to storage periodically
+// In-memory cache, flushed to storage when dirty
 let tabTimes: Record<number, number> = {};
 let tabStages: Record<number, AgingStage> = {};
 let initialized = false;
+let dirty = false;
 
 export async function initTracker(freshInstall = false): Promise<void> {
   if (initialized) return;
@@ -63,16 +64,19 @@ export async function reloadFromStorage(): Promise<void> {
 export function recordActivation(tabId: number): void {
   tabTimes[tabId] = Date.now();
   tabStages[tabId] = 0;
+  dirty = true;
 }
 
 export function recordNewTab(tabId: number): void {
   tabTimes[tabId] = Date.now();
   tabStages[tabId] = 0;
+  dirty = true;
 }
 
 export function removeTab(tabId: number): void {
   delete tabTimes[tabId];
   delete tabStages[tabId];
+  dirty = true;
 }
 
 export function getLastAccessed(tabId: number): number | undefined {
@@ -85,6 +89,7 @@ export function getStage(tabId: number): AgingStage {
 
 export function setStage(tabId: number, stage: AgingStage): void {
   tabStages[tabId] = stage;
+  dirty = true;
 }
 
 export function getAllTrackedTabIds(): number[] {
@@ -92,8 +97,9 @@ export function getAllTrackedTabIds(): number[] {
 }
 
 export async function flush(): Promise<void> {
-  await setTabTimes(tabTimes);
-  await setTabStages(tabStages);
+  if (!dirty) return;
+  await Promise.all([setTabTimes(tabTimes), setTabStages(tabStages)]);
+  dirty = false;
 }
 
 // --- Event listeners ---

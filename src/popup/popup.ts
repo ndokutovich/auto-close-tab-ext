@@ -1,5 +1,6 @@
 import browser from 'webextension-polyfill';
 import type { GraveyardEntry } from '../shared/types';
+import { formatTime, defaultFavicon } from '../shared/pure';
 
 const searchInput = document.getElementById('search') as HTMLInputElement;
 const listEl = document.getElementById('graveyard-list')!;
@@ -81,29 +82,6 @@ function render(entries: GraveyardEntry[]): void {
     fragment.appendChild(createEntryElement(entry));
   }
   listEl.appendChild(fragment);
-}
-
-function defaultFavicon(url: string): string {
-  try {
-    const origin = new URL(url).origin;
-    return `${origin}/favicon.ico`;
-  } catch {
-    return '';
-  }
-}
-
-function formatTime(timestamp: number): string {
-  const diff = Date.now() - timestamp;
-  const minutes = Math.floor(diff / 60000);
-
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes}m ago`;
-
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
 }
 
 // --- Event handlers ---
