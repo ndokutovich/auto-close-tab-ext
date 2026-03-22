@@ -1,6 +1,7 @@
 import browser from 'webextension-polyfill';
 import type { Settings, GraveyardEntry } from '../shared/types';
 import { formatTime, defaultFavicon } from '../shared/pure';
+import { FALLBACK_FAVICON } from '../shared/constants';
 
 const timeoutInput = document.getElementById('timeout') as HTMLInputElement;
 const minTabsInput = document.getElementById('minTabs') as HTMLInputElement;
@@ -75,11 +76,7 @@ function createEntryElement(entry: GraveyardEntry): HTMLElement {
   const favicon = document.createElement('img');
   favicon.className = 'favicon';
   favicon.src = entry.faviconUrl || defaultFavicon(entry.url);
-  favicon.onerror = () => {
-    favicon.src = 'data:image/svg+xml,' + encodeURIComponent(
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect fill="#3f3f46" width="16" height="16" rx="2"/></svg>'
-    );
-  };
+  favicon.onerror = () => { favicon.src = FALLBACK_FAVICON; };
 
   const info = document.createElement('div');
   info.className = 'info';

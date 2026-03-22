@@ -35,10 +35,12 @@ function applyGrayscale(img: HTMLImageElement, percentage: number): string {
   const c = getOrCreateCanvas();
   const ctx = c.getContext('2d')!;
 
-  c.width = img.naturalWidth || 32;
-  c.height = img.naturalHeight || 32;
-
-  ctx.clearRect(0, 0, c.width, c.height);
+  const w = img.naturalWidth || 32;
+  const h = img.naturalHeight || 32;
+  // Only resize when dimensions change (avoids GPU texture re-allocation)
+  if (c.width !== w) c.width = w;
+  if (c.height !== h) c.height = h;
+  else ctx.clearRect(0, 0, c.width, c.height);
   ctx.filter = `grayscale(${percentage}%)`;
   ctx.globalAlpha = 1 - (percentage / 100) * 0.3; // slight fade at full grayscale
   ctx.drawImage(img, 0, 0, c.width, c.height);
@@ -92,20 +94,21 @@ async function requestFaviconViaBackground(url: string, percentage: number): Pro
   try {
     const requestId = `${Date.now()}-${Math.random()}`;
 
-    // Set up one-time listener for the response
     const handler = (message: any) => {
       if (message.type === 'FETCH_FAVICON_RESULT' && message.requestId === requestId) {
         browser.runtime.onMessage.removeListener(handler);
-
+        clearTimeout(timeoutId);
         const img = new Image();
-        img.onload = () => {
-          const dataUrl = applyGrayscale(img, percentage);
-          setFavicon(dataUrl);
-        };
+        img.onload = () => setFavicon(applyGrayscale(img, percentage));
         img.src = message.dataUrl;
       }
     };
+
     browser.runtime.onMessage.addListener(handler);
+    // Remove listener after 5s if background never replies (prevents leak)
+    const timeoutId = setTimeout(() => {
+      browser.runtime.onMessage.removeListener(handler);
+    }, 5000);
 
     browser.runtime.sendMessage({
       type: 'FETCH_FAVICON_REQUEST',

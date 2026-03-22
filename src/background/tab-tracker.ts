@@ -46,6 +46,10 @@ export async function initTracker(freshInstall = false): Promise<void> {
     }
   }
 
+  // Init active tab ID synchronously from the query we already have
+  const activeTab = tabs.find(t => t.active);
+  if (activeTab?.id) currentActiveTabId = activeTab.id;
+
   await flush();
   initialized = true;
 }
@@ -58,6 +62,8 @@ export function ensureLoaded(): boolean {
 export async function reloadFromStorage(): Promise<void> {
   tabTimes = await getTabTimes();
   tabStages = await getTabStages();
+  const activeTabs = await browser.tabs.query({ active: true, currentWindow: true });
+  if (activeTabs[0]?.id) currentActiveTabId = activeTabs[0].id;
   initialized = true;
 }
 
@@ -107,11 +113,6 @@ export async function flush(): Promise<void> {
 let currentActiveTabId: number | undefined;
 
 export function setupTabListeners(): void {
-  // Track initial active tab
-  browser.tabs.query({ active: true, currentWindow: true }).then(tabs => {
-    if (tabs[0]?.id) currentActiveTabId = tabs[0].id;
-  });
-
   browser.tabs.onActivated.addListener(({ tabId }) => {
     // Update the tab we're LEAVING — its timer starts NOW, not when we arrived
     if (currentActiveTabId !== undefined && currentActiveTabId !== tabId) {

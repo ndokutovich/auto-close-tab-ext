@@ -1,6 +1,7 @@
 import browser from 'webextension-polyfill';
 import type { AgingStage, BgToContentMsg } from '../shared/types';
-import { ALARM_NAME, CHECK_INTERVAL_SECONDS, MAX_STAGE } from '../shared/constants';
+import { ALARM_NAME, CHECK_INTERVAL_SECONDS } from '../shared/constants';
+import { computeAgingStage } from '../shared/pure';
 import { getSettings } from '../shared/storage';
 import {
   ensureLoaded,
@@ -63,8 +64,7 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
       continue;
     }
 
-    const ratio = elapsed / timeoutMs;
-    const newStage = Math.min(MAX_STAGE, Math.floor(ratio * (MAX_STAGE + 1))) as AgingStage;
+    const newStage = computeAgingStage(elapsed, timeoutMs);
     const oldStage = getStage(tabId);
 
     if (newStage !== oldStage) {
