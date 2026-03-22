@@ -9,6 +9,8 @@ import {
   isTabImmune,
   stripAgingPrefix,
   capGraveyard,
+  formatTime,
+  defaultFavicon,
 } from '../shared/pure';
 
 // --- Custom generators ---
@@ -520,6 +522,136 @@ describe('capGraveyard properties', () => {
           );
         }
       )
+    );
+  });
+});
+
+// ============================================================
+// formatTime
+// ============================================================
+describe('formatTime properties', () => {
+  it('always returns a non-empty string', () => {
+    fc.assert(
+      fc.property(fc.nat({ max: 2_000_000_000 }), (offset) => {
+        const timestamp = Date.now() - offset;
+        const result = formatTime(timestamp);
+        expect(typeof result).toBe('string');
+        expect(result.length).toBeGreaterThan(0);
+      })
+    );
+  });
+
+  it('returns "just now" for timestamps less than 1 minute ago', () => {
+    const now = Date.now();
+    expect(formatTime(now)).toBe('just now');
+    expect(formatTime(now - 30_000)).toBe('just now');
+    // Skip 59999 — timing-sensitive near boundary
+  });
+
+  it('returns minutes for timestamps 1-59 minutes ago', () => {
+    const now = Date.now();
+    for (const mins of [1, 5, 30, 59]) {
+      const result = formatTime(now - mins * 60_000);
+      expect(result).toBe(`${mins}m ago`);
+    }
+  });
+
+  it('returns hours for timestamps 1-23 hours ago', () => {
+    const now = Date.now();
+    for (const hrs of [1, 6, 12, 23]) {
+      const result = formatTime(now - hrs * 3_600_000);
+      expect(result).toBe(`${hrs}h ago`);
+    }
+  });
+
+  it('returns days for timestamps 24+ hours ago', () => {
+    const now = Date.now();
+    for (const days of [1, 7, 30]) {
+      const result = formatTime(now - days * 86_400_000);
+      expect(result).toBe(`${days}d ago`);
+    }
+  });
+
+  it('output matches one of the valid patterns', () => {
+    fc.assert(
+      fc.property(fc.nat({ max: 100_000_000 }), (offset) => {
+        const result = formatTime(Date.now() - offset);
+        const validPattern = /^(just now|\d+m ago|\d+h ago|\d+d ago)$/;
+        expect(result).toMatch(validPattern);
+      })
+    );
+  });
+
+  it('monotonic: older timestamps produce higher or equal numeric values', () => {
+    fc.assert(
+      fc.property(
+        fc.nat({ max: 100_000_000 }),
+        fc.nat({ max: 100_000_000 }),
+        (a, b) => {
+          const now = Date.now();
+          const newer = formatTime(now - Math.min(a, b));
+          const older = formatTime(now - Math.max(a, b));
+          // Extract numeric part (0 for "just now")
+          const numOf = (s: string) => {
+            if (s === 'just now') return 0;
+            return parseInt(s);
+          };
+          const unitOf = (s: string) => {
+            if (s === 'just now') return 0;
+            if (s.includes('m ago')) return 1;
+            if (s.includes('h ago')) return 2;
+            return 3; // d ago
+          };
+          const olderUnit = unitOf(older);
+          const newerUnit = unitOf(newer);
+          if (olderUnit !== newerUnit) {
+            expect(olderUnit).toBeGreaterThanOrEqual(newerUnit);
+          } else {
+            expect(numOf(older)).toBeGreaterThanOrEqual(numOf(newer));
+          }
+        }
+      )
+    );
+  });
+});
+
+// ============================================================
+// defaultFavicon
+// ============================================================
+describe('defaultFavicon properties', () => {
+  it('returns URL ending with /favicon.ico for valid URLs', () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom('http', 'https'),
+        hostname,
+        (scheme, host) => {
+          const result = defaultFavicon(`${scheme}://${host}/page`);
+          expect(result).toMatch(/\/favicon\.ico$/);
+          expect(result).toContain(host);
+        }
+      )
+    );
+  });
+
+  it('returns empty string for invalid URLs', () => {
+    fc.assert(
+      fc.property(
+        fc.string().filter(s => {
+          try { new URL(s); return false; } catch { return true; }
+        }),
+        (invalid) => {
+          expect(defaultFavicon(invalid)).toBe('');
+        }
+      )
+    );
+  });
+
+  it('never throws', () => {
+    fc.assert(
+      fc.property(fc.string(), (input) => {
+        const result = defaultFavicon(input);
+        expect(typeof result).toBe('string');
+      })
     );
   });
 });
