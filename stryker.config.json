@@ -1,0 +1,9 @@
+{
+  "$schema": "https://raw.githubusercontent.com/stryker-mutator/stryker/master/packages/core/schema/stryker-core.schema.json",
+  "mutate": ["src/shared/pure.ts"],
+  "testRunner": "vitest",
+  "reporters": ["clear-text", "progress"],
+  "coverageAnalysis": "all",
+  "timeoutMS": 30000,
+  "concurrency": 4
+}

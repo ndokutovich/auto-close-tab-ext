@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=400">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup">
+    <header class="header">
+      <h1 class="title">Aging Tabs</h1>
+      <button id="btn-options" class="btn-icon" title="Settings">&#9881;</button>
+    </header>
+
+    <div class="search-bar">
+      <input type="text" id="search" placeholder="Search closed tabs..." autocomplete="off">
+    </div>
+
+    <div id="graveyard-list" class="graveyard-list">
+      <div class="empty-state">No closed tabs yet</div>
+    </div>
+
+    <footer class="footer">
+      <span id="graveyard-count" class="count">0 tabs</span>
+      <button id="btn-clear" class="btn-text" title="Clear all">Clear all</button>
+    </footer>
+  </div>
+
+  <script src="../browser-polyfill.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+{
+  "name": "aging-tabs",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Auto-close inactive tabs with visual aging feedback",
+  "scripts": {
+    "build": "node build.mjs",
+    "build:chrome": "node build.mjs --browser=chrome",
+    "build:firefox": "node build.mjs --browser=firefox",
+    "watch": "node build.mjs --watch",
+    "clean": "rm -rf dist",
+    "package:chrome": "cd dist/chrome && zip -r ../aging-tabs-chrome.zip .",
+    "package:firefox": "cd dist/firefox && zip -r ../aging-tabs-firefox.zip .",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@stryker-mutator/core": "^9.6.0",
+    "@stryker-mutator/vitest-runner": "^9.6.0",
+    "esbuild": "^0.24.0",
+    "fast-check": "^4.6.0",
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.0"
+  },
+  "dependencies": {
+    "webextension-polyfill": "^0.12.0"
+  }
+}

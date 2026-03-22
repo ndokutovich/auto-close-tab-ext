@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "Aging Tabs",
+  "version": "1.0.0",
+  "description": "Auto-close inactive tabs with visual aging feedback and a searchable graveyard",
+  "permissions": ["tabs", "alarms", "storage", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "scripts": ["browser-polyfill.js", "background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["browser-polyfill.js", "content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.svg",
+      "48": "icons/icon-48.svg"
+    }
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
+  "icons": {
+    "16": "icons/icon-16.svg",
+    "32": "icons/icon-32.svg",
+    "48": "icons/icon-48.svg",
+    "128": "icons/icon-128.svg"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "aging-tabs@example.com",
+      "strict_min_version": "121.0"
+    }
+  }
+}
