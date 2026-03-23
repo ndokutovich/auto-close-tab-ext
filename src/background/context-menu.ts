@@ -13,11 +13,27 @@ export function setupContextMenu(): void {
       title: msg('menuLockTab'),
       contexts: ['tab'],
     });
-  } catch {
-    // contextMenus may not be available
-  }
 
-  try {
+    // Dynamically update menu title to show current lock state
+    try {
+      if (browser.contextMenus.onShown) {
+        browser.contextMenus.onShown.addListener(async (info, tab) => {
+          if (!tab?.id) return;
+          try {
+            const locked = await isTabLocked(tab.id);
+            await browser.contextMenus.update(MENU_ID, {
+              title: locked ? msg('menuUnlockTab') : msg('menuLockTab'),
+            });
+            browser.contextMenus.refresh();
+          } catch {
+            // update/refresh may fail
+          }
+        });
+      }
+    } catch {
+      // onShown may not be available (Chrome)
+    }
+
     browser.contextMenus.onClicked.addListener(async (info, tab) => {
       if (info.menuItemId !== MENU_ID || !tab?.id) return;
       const locked = await isTabLocked(tab.id);
@@ -28,7 +44,7 @@ export function setupContextMenu(): void {
       }
     });
   } catch {
-    // listener registration may fail
+    // contextMenus may not be available
   }
 }
 
