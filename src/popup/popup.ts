@@ -1,8 +1,8 @@
 import browser from 'webextension-polyfill';
 import type { GraveyardEntry } from '../shared/types';
-import { formatTime, defaultFavicon, sortGraveyard, type GraveyardSortMode } from '../shared/pure';
+import { defaultFavicon, sortGraveyard, type GraveyardSortMode } from '../shared/pure';
 import { FALLBACK_FAVICON } from '../shared/constants';
-import { msg, applyI18n } from '../shared/i18n';
+import { msg, applyI18n, formatTimeI18n } from '../shared/i18n';
 
 applyI18n();
 
@@ -63,7 +63,7 @@ function createEntryElement(entry: GraveyardEntry): HTMLElement {
 
   const timeSpan = document.createElement('span');
   timeSpan.className = 'tab-time';
-  timeSpan.textContent = formatTime(entry.closedAt);
+  timeSpan.textContent = formatTimeI18n(entry.closedAt);
 
   const removeBtn = document.createElement('button');
   removeBtn.className = 'btn-remove';

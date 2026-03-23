@@ -18,6 +18,21 @@ export function msg(key: string, ...substitutions: string[]): string {
  * - data-i18n-placeholder="key" → placeholder attribute
  * - data-i18n-title="key" → title attribute
  */
+/**
+ * Localized relative time formatting.
+ * Uses i18n message keys: timeJustNow, timeMinutesAgo, timeHoursAgo, timeDaysAgo.
+ */
+export function formatTimeI18n(timestamp: number): string {
+  const diff = Date.now() - timestamp;
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return msg('timeJustNow');
+  if (minutes < 60) return msg('timeMinutesAgo', String(minutes));
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return msg('timeHoursAgo', String(hours));
+  const days = Math.floor(hours / 24);
+  return msg('timeDaysAgo', String(days));
+}
+
 export function applyI18n(): void {
   for (const el of document.querySelectorAll<HTMLElement>('[data-i18n]')) {
     const key = el.dataset.i18n!;
