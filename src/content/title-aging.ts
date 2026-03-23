@@ -21,15 +21,35 @@ function applyPrefix(stage: AgingStage): void {
   }
 }
 
-function startBlink(): void {
-  if (blinkInterval) return;
+// Blink speed by stage — slower = gentle notice, faster = urgent
+const BLINK_SPEED: Partial<Record<AgingStage, number>> = {
+  3: 2000,  // slow pulse — "hey, this tab is getting old"
+  4: 400,   // fast heartbeat — "about to die"
+};
+
+function startBlink(stage: AgingStage): void {
+  const speed = BLINK_SPEED[stage];
+  if (!speed) return;
+
   const baseTitle = originalTitle ?? stripAgingPrefix(document.title);
 
+  // If already blinking at different speed, restart
+  if (blinkInterval) {
+    clearInterval(blinkInterval);
+  }
+
+  blinkState = false;
   blinkInterval = setInterval(() => {
     ignoreNextMutation = true;
     blinkState = !blinkState;
-    document.title = blinkState ? '\u26a0\ufe0f Closing soon...' : baseTitle;
-  }, 700);
+    if (stage === 4) {
+      document.title = blinkState ? '\u26a0\ufe0f Closing soon...' : baseTitle;
+    } else {
+      // Stage 3: subtle — blink between prefix and no prefix
+      const prefix = STAGE_PREFIX[stage];
+      document.title = blinkState ? prefix + baseTitle : baseTitle;
+    }
+  }, speed);
 }
 
 function stopBlink(): void {
@@ -97,9 +117,9 @@ export function handleTitleAging(stage: AgingStage): void {
 
   setupObserver();
 
-  // Stage 4: blink title as final warning
-  if (stage >= 4) {
-    startBlink();
+  // Stages 3-4: blink with increasing urgency
+  if (stage >= 3 && BLINK_SPEED[stage]) {
+    startBlink(stage);
   } else {
     stopBlink();
     applyPrefix(stage);
