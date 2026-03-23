@@ -11,7 +11,9 @@ import {
   capGraveyard,
   formatTime,
   defaultFavicon,
+  sortGraveyard,
 } from '../shared/pure';
+import type { GraveyardEntry } from '../shared/types';
 
 // --- Custom generators ---
 
@@ -656,6 +658,107 @@ describe('defaultFavicon properties', () => {
         const result = defaultFavicon(input);
         expect(typeof result).toBe('string');
       })
+    );
+  });
+});
+
+// ============================================================
+// sortGraveyard
+// ============================================================
+
+const graveyardEntry = fc.record<GraveyardEntry>({
+  id: fc.string({ minLength: 1, maxLength: 10 }),
+  url: fc.constantFrom('https://a.com', 'https://b.com', 'https://c.com', 'https://z.com'),
+  title: fc.constantFrom('Alpha', 'Beta', 'Gamma', 'Zeta', 'Omega'),
+  faviconUrl: fc.constant(''),
+  closedAt: fc.nat({ max: 2_000_000_000 }),
+  domain: fc.constantFrom('a.com', 'b.com', 'c.com', 'z.com'),
+});
+
+describe('sortGraveyard properties', () => {
+  it('preserves length', () => {
+    fc.assert(
+      fc.property(
+        fc.array(graveyardEntry, { maxLength: 20 }),
+        fc.constantFrom('recent' as const, 'domain' as const, 'alpha' as const),
+        (entries, mode) => {
+          expect(sortGraveyard(entries, mode).length).toBe(entries.length);
+        }
+      )
+    );
+  });
+
+  it('does not mutate original array', () => {
+    fc.assert(
+      fc.property(
+        fc.array(graveyardEntry, { minLength: 1, maxLength: 20 }),
+        fc.constantFrom('recent' as const, 'domain' as const, 'alpha' as const),
+        (entries, mode) => {
+          const copy = [...entries];
+          sortGraveyard(entries, mode);
+          expect(entries).toEqual(copy);
+        }
+      )
+    );
+  });
+
+  it('recent: sorted by closedAt descending', () => {
+    fc.assert(
+      fc.property(
+        fc.array(graveyardEntry, { minLength: 2, maxLength: 20 }),
+        (entries) => {
+          const sorted = sortGraveyard(entries, 'recent');
+          for (let i = 1; i < sorted.length; i++) {
+            expect(sorted[i - 1].closedAt).toBeGreaterThanOrEqual(sorted[i].closedAt);
+          }
+        }
+      )
+    );
+  });
+
+  it('alpha: sorted by title ascending', () => {
+    fc.assert(
+      fc.property(
+        fc.array(graveyardEntry, { minLength: 2, maxLength: 20 }),
+        (entries) => {
+          const sorted = sortGraveyard(entries, 'alpha');
+          for (let i = 1; i < sorted.length; i++) {
+            expect(sorted[i - 1].title.localeCompare(sorted[i].title)).toBeLessThanOrEqual(0);
+          }
+        }
+      )
+    );
+  });
+
+  it('domain: sorted by domain ascending, then closedAt descending within same domain', () => {
+    fc.assert(
+      fc.property(
+        fc.array(graveyardEntry, { minLength: 2, maxLength: 20 }),
+        (entries) => {
+          const sorted = sortGraveyard(entries, 'domain');
+          for (let i = 1; i < sorted.length; i++) {
+            const cmp = sorted[i - 1].domain.localeCompare(sorted[i].domain);
+            expect(cmp).toBeLessThanOrEqual(0);
+            if (cmp === 0) {
+              expect(sorted[i - 1].closedAt).toBeGreaterThanOrEqual(sorted[i].closedAt);
+            }
+          }
+        }
+      )
+    );
+  });
+
+  it('idempotent: sorting twice gives same result', () => {
+    fc.assert(
+      fc.property(
+        fc.array(graveyardEntry, { maxLength: 20 }),
+        fc.constantFrom('recent' as const, 'domain' as const, 'alpha' as const),
+        (entries, mode) => {
+          const once = sortGraveyard(entries, mode);
+          const twice = sortGraveyard(once, mode);
+          expect(twice).toEqual(once);
+        }
+      )
     );
   });
 });
