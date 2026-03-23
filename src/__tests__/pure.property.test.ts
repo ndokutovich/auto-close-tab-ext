@@ -439,14 +439,18 @@ describe('stripAgingPrefix properties', () => {
 // capGraveyard
 // ============================================================
 describe('capGraveyard properties', () => {
-  it('output length = min(input.length, maxSize)', () => {
+  it('output length = min(input.length, maxSize), 0 = unlimited', () => {
     fc.assert(
       fc.property(
         fc.array(fc.nat(), { maxLength: 100 }),
         fc.nat({ max: 100 }),
         (entries, maxSize) => {
           const result = capGraveyard(entries, maxSize);
-          expect(result.length).toBe(Math.min(entries.length, maxSize));
+          if (maxSize === 0) {
+            expect(result.length).toBe(entries.length);
+          } else {
+            expect(result.length).toBe(Math.min(entries.length, maxSize));
+          }
         }
       )
     );
@@ -508,12 +512,12 @@ describe('capGraveyard properties', () => {
     );
   });
 
-  it('monotonic in maxSize: bigger limit => more entries', () => {
+  it('monotonic in maxSize: bigger limit => more entries (excluding 0=unlimited)', () => {
     fc.assert(
       fc.property(
         fc.array(fc.nat(), { maxLength: 50 }),
-        fc.nat({ max: 50 }),
-        fc.nat({ max: 50 }),
+        fc.integer({ min: 1, max: 50 }),
+        fc.integer({ min: 1, max: 50 }),
         (entries, a, b) => {
           const lo = Math.min(a, b);
           const hi = Math.max(a, b);

@@ -150,6 +150,7 @@ export function sortGraveyard(entries: GraveyardEntry[], mode: GraveyardSortMode
  * Cap graveyard entries to maxSize, evicting oldest.
  */
 export function capGraveyard<T>(entries: T[], maxSize: number): T[] {
+  if (maxSize <= 0) return entries; // 0 = unlimited
   if (entries.length <= maxSize) return entries;
   return entries.slice(0, maxSize);
 }

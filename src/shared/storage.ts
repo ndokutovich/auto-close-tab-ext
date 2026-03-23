@@ -24,7 +24,7 @@ export async function saveSettings(partial: Partial<Settings>): Promise<Settings
     ...merged,
     timeoutMinutes: Math.max(1, Math.min(1440, Number(merged.timeoutMinutes) || current.timeoutMinutes)),
     minTabCount: Math.max(0, Math.min(100, Number(merged.minTabCount) ?? current.minTabCount)),
-    graveyardMaxSize: Math.max(10, Math.min(1000, Number(merged.graveyardMaxSize) || current.graveyardMaxSize)),
+    graveyardMaxSize: Math.max(0, Math.min(10000, Number(merged.graveyardMaxSize) ?? current.graveyardMaxSize)),
     faviconDimming: !!merged.faviconDimming,
     titlePrefix: !!merged.titlePrefix,
     closeEmptyTabs: !!merged.closeEmptyTabs,
