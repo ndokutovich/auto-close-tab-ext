@@ -40,27 +40,47 @@ function stopBlink(): void {
   }
 }
 
+function onTitleMutation(): void {
+  if (ignoreNextMutation) {
+    ignoreNextMutation = false;
+    return;
+  }
+
+  const rawTitle = stripAgingPrefix(document.title);
+  originalTitle = rawTitle;
+
+  if (currentStage > 0) {
+    applyPrefix(currentStage);
+  }
+}
+
+function observeTitleElement(titleEl: Element): void {
+  if (observer) observer.disconnect();
+  observer = new MutationObserver(onTitleMutation);
+  observer.observe(titleEl, { childList: true, characterData: true, subtree: true });
+}
+
+let headObserver: MutationObserver | null = null;
+
 function setupObserver(): void {
-  if (observer) return;
-
   const titleEl = document.querySelector('title');
-  if (!titleEl) return;
+  if (titleEl) {
+    observeTitleElement(titleEl);
+    return;
+  }
 
-  observer = new MutationObserver(() => {
-    if (ignoreNextMutation) {
-      ignoreNextMutation = false;
-      return;
-    }
-
-    const rawTitle = stripAgingPrefix(document.title);
-    originalTitle = rawTitle;
-
-    if (currentStage > 0) {
-      applyPrefix(currentStage);
+  // No <title> yet — watch <head> for its appearance
+  if (headObserver) return;
+  const head = document.head || document.documentElement;
+  headObserver = new MutationObserver(() => {
+    const el = document.querySelector('title');
+    if (el) {
+      headObserver!.disconnect();
+      headObserver = null;
+      observeTitleElement(el);
     }
   });
-
-  observer.observe(titleEl, { childList: true, characterData: true, subtree: true });
+  headObserver.observe(head, { childList: true });
 }
 
 export function handleTitleAging(stage: AgingStage): void {
