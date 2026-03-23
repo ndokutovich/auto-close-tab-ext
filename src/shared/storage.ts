@@ -23,7 +23,7 @@ export async function saveSettings(partial: Partial<Settings>): Promise<Settings
   const updated: Settings = {
     ...merged,
     timeoutMinutes: Math.max(1, Math.min(1440, Number(merged.timeoutMinutes) || current.timeoutMinutes)),
-    minTabCount: Math.max(1, Math.min(100, Number(merged.minTabCount) || current.minTabCount)),
+    minTabCount: Math.max(0, Math.min(100, Number(merged.minTabCount) ?? current.minTabCount)),
     graveyardMaxSize: Math.max(10, Math.min(1000, Number(merged.graveyardMaxSize) || current.graveyardMaxSize)),
     faviconDimming: !!merged.faviconDimming,
     titlePrefix: !!merged.titlePrefix,
