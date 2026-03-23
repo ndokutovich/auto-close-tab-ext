@@ -80,4 +80,4 @@ All data stays in your browser. No accounts, no servers, no tracking, no network
 
 ## License
 
-Proprietary. See [LICENSE](LICENSE) for details.
+MIT. See [LICENSE](LICENSE).
