@@ -25,13 +25,13 @@ Growing tab count causes decision paralysis — you keep tabs open "just in case
 - Lock tab: right-click → Lock (prevent auto-close without pinning)
 - Keyboard shortcut: Alt+L to lock/unlock current tab
 - Domain whitelist
-- Minimum tab count floor
+- Minimum tab count floor (0 = no floor, active tab always protected)
 - Close empty tabs (about:blank, new tab)
 - Tab groups protection (Firefox 138+ / Chrome)
 - Discard mode: unload from memory instead of closing
 - Grace period on fresh install
 - Idle pause: aging only during active work time
-- JSON export/import for graveyard backup
+- JSON export/import for graveyard backup (unlimited history with size = 0)
 - Light/dark theme (follows browser)
 - i18n: English + Russian
 - Cross-browser: Chrome + Firefox (Manifest V3)

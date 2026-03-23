@@ -42,7 +42,7 @@ Don't want to close tabs? Switch to discard mode — tabs stay visible but unloa
 - Favicon dimming on/off
 - Title prefix indicators on/off
 - Domain whitelist
-- Min tab count floor
+- Min tab count floor (set to 0 for no limit)
 - Close empty tabs on/off
 - Protect grouped tabs on/off
 
