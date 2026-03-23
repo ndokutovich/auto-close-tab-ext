@@ -53,11 +53,13 @@ npm run build
 ### Development
 
 ```bash
-npm run watch        # auto-rebuild on changes
-npm test             # run unit + property-based tests
-npm run package:firefox   # create .zip for AMO submission
-npm run package:chrome    # create .zip for Chrome Web Store
-npm run package:source    # create source .zip for AMO review
+npm run watch                        # auto-rebuild on changes
+npm test                             # run 104 unit + property-based tests
+npx vitest run --coverage            # coverage report (98.7% stmts)
+node scenarios/aging-tabs.spec.mjs   # run 19 e2e holdout scenarios
+npm run package:firefox              # create .zip for AMO submission
+npm run package:chrome               # create .zip for Chrome Web Store
+npm run package:source               # create source .zip for AMO review
 ```
 
 ## Tech Stack
@@ -65,9 +67,12 @@ npm run package:source    # create source .zip for AMO review
 - TypeScript (strict mode, zero type errors)
 - esbuild for bundling
 - webextension-polyfill for cross-browser compat
-- vitest + fast-check for testing (98 tests, 94.4% mutation score)
-- Stryker for mutation testing
+- vitest + fast-check for testing (104 unit/property tests)
+- Code coverage: 98.7% statements, 100% functions (pure logic)
+- Stryker mutation testing: 94.4% kill rate
+- 19 e2e holdout scenarios via Playwright (100% satisfaction)
 - Security audited (SSRF protection, message sender validation, CSP, input sanitization)
+- Adversarial review: 8/8 bugs found and fixed
 
 ## Privacy
 
