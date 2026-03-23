@@ -32,8 +32,17 @@ jobs:
             --channel listed \
             --artifacts-dir dist
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: firefox-extension
-          path: dist/*.xpi
+      - name: Package Chrome
+        run: |
+          cd dist/chrome && zip -r ../aging-tabs-chrome.zip .
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG_NAME" \
+            --title "Aging Tabs $TAG_NAME" \
+            --generate-notes \
+            dist/aging-tabs-chrome.zip \
+            dist/*.xpi
