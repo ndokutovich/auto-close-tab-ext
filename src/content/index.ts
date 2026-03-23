@@ -3,6 +3,12 @@ import type { BgToContentMsg, ContentToBgMsg } from '../shared/types';
 import { handleFaviconAging, resetFavicon } from './favicon-aging';
 import { handleTitleAging, resetTitle } from './title-aging';
 
+// Prevent double-injection (manifest + scripting.executeScript)
+if ((window as any).__agingTabsInjected) {
+  // Already running — don't register duplicate listeners
+} else {
+(window as any).__agingTabsInjected = true;
+
 browser.runtime.onMessage.addListener((rawMessage: unknown) => {
   const message = rawMessage as BgToContentMsg;
   switch (message.type) {
@@ -23,6 +29,6 @@ browser.runtime.onMessage.addListener((rawMessage: unknown) => {
 });
 
 // Notify background that content script is ready
-browser.runtime.sendMessage({ type: 'CONTENT_READY' } satisfies ContentToBgMsg).catch(() => {
-  // Background might not be listening yet, that's fine
-});
+browser.runtime.sendMessage({ type: 'CONTENT_READY' } satisfies ContentToBgMsg).catch(() => {});
+
+} // end of double-injection guard

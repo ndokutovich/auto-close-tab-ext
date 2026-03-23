@@ -86,10 +86,10 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
       if (settings.expireAction === 'discard') {
         await browser.tabs.discard(tabId);
       } else {
-        await buryTab(tab, settings.graveyardMaxSize);
+        const entry = await buryTab(tab, settings.graveyardMaxSize);
         await browser.tabs.remove(tabId);
         tabCount--;
-        showCloseNotification(tab);
+        showCloseNotification(tab, entry.id);
       }
     } catch {
       // Tab already gone or can't be discarded
@@ -106,8 +106,8 @@ function sendAgingUpdate(tabId: number, stage: AgingStage, timeRemainingMs: numb
 
 const NOTIF_PREFIX = 'aging-tabs-closed-';
 
-function showCloseNotification(tab: browser.Tabs.Tab): void {
-  const notifId = NOTIF_PREFIX + Date.now();
+function showCloseNotification(tab: browser.Tabs.Tab, entryId: string): void {
+  const notifId = NOTIF_PREFIX + entryId;
   const title = tab.title || 'Untitled';
   const domain = extractDomain(tab.url);
 
@@ -130,12 +130,13 @@ export function setupNotificationListener(): void {
     if (!browser.notifications?.onClicked) return;
     browser.notifications.onClicked.addListener(async (notifId: string) => {
       if (!notifId.startsWith(NOTIF_PREFIX)) return;
+      const entryId = notifId.slice(NOTIF_PREFIX.length);
 
       const graveyard = await getGraveyard();
-      if (graveyard.length > 0) {
-        const entry = graveyard[0];
+      const entry = graveyard.find(e => e.id === entryId);
+      if (entry) {
         await restoreTab(entry.url);
-        await removeEntry(entry.closedAt);
+        await removeEntry(entry.id);
       }
       browser.notifications.clear(notifId).catch(() => {});
     });

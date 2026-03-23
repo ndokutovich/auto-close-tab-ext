@@ -40,7 +40,7 @@ function createEntryElement(entry: GraveyardEntry): HTMLElement {
   const item = document.createElement('div');
   item.className = 'graveyard-item';
   item.dataset.url = entry.url;
-  item.dataset.closedAt = String(entry.closedAt);
+  item.dataset.entryId = entry.id;
 
   const favicon = document.createElement('img');
   favicon.className = 'favicon';
@@ -110,8 +110,8 @@ listEl.addEventListener('click', async (e) => {
 
   if (target.classList.contains('btn-remove')) {
     e.stopPropagation();
-    const closedAt = Number(item.dataset.closedAt);
-    await browser.runtime.sendMessage({ type: 'REMOVE_GRAVEYARD_ENTRY', closedAt });
+    const id = item.dataset.entryId!;
+    await browser.runtime.sendMessage({ type: 'REMOVE_GRAVEYARD_ENTRY', id });
     await loadGraveyard();
     return;
   }

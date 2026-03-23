@@ -18,6 +18,7 @@ export interface Settings {
 // --- Graveyard ---
 
 export interface GraveyardEntry {
+  id: string;
   url: string;
   title: string;
   faviconUrl: string;
@@ -50,7 +51,7 @@ export type ContentToBgMsg =
 export type UiToBgMsg =
   | { type: 'GET_GRAVEYARD' }
   | { type: 'RESTORE_TAB'; url: string }
-  | { type: 'REMOVE_GRAVEYARD_ENTRY'; closedAt: number }
+  | { type: 'REMOVE_GRAVEYARD_ENTRY'; id: string }
   | { type: 'CLEAR_GRAVEYARD' }
   | { type: 'GET_SETTINGS' }
   | { type: 'SAVE_SETTINGS'; settings: Partial<Settings> }

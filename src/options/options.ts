@@ -43,16 +43,17 @@ async function saveSettings(): Promise<void> {
     .map(d => d.trim().toLowerCase())
     .filter(d => d.length > 0);
 
+  // Bounds enforced in saveSettings — don't duplicate here
   const settings: Partial<Settings> = {
-    timeoutMinutes: Math.max(1, Number(timeoutInput.value) || 30),
-    minTabCount: Math.max(1, Number(minTabsInput.value) || 3),
+    timeoutMinutes: Number(timeoutInput.value) || 30,
+    minTabCount: Number(minTabsInput.value) ?? 3,
     expireAction: expireActionSelect.value as 'close' | 'discard',
     closeEmptyTabs: closeEmptyToggle.checked,
     protectGroupedTabs: protectGroupsToggle.checked,
     faviconDimming: faviconToggle.checked,
     titlePrefix: titleToggle.checked,
     whitelistedDomains: domains,
-    graveyardMaxSize: Math.max(10, Number(graveyardSizeInput.value) || 200),
+    graveyardMaxSize: Number(graveyardSizeInput.value) ?? 200,
   };
 
   await browser.runtime.sendMessage({ type: 'SAVE_SETTINGS', settings });

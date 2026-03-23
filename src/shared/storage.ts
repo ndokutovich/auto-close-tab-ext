@@ -89,9 +89,9 @@ export async function addToGraveyard(entry: GraveyardEntry, maxSize: number): Pr
   return capped;
 }
 
-export async function removeFromGraveyard(closedAt: number): Promise<GraveyardEntry[]> {
+export async function removeFromGraveyard(id: string): Promise<GraveyardEntry[]> {
   let graveyard = await getGraveyard();
-  graveyard = graveyard.filter(e => e.closedAt !== closedAt);
+  graveyard = graveyard.filter(e => e.id !== id);
   await browser.storage.local.set({ [STORAGE_KEYS.GRAVEYARD]: graveyard });
   return graveyard;
 }
@@ -147,11 +147,40 @@ export async function exportAllData(): Promise<string> {
 export async function importData(jsonString: string): Promise<void> {
   const data = JSON.parse(jsonString);
   if (typeof data !== 'object' || data === null) throw new Error('Invalid data');
-  // Only import known keys
-  const allowed = Object.values(STORAGE_KEYS);
-  const filtered: Record<string, unknown> = {};
-  for (const key of allowed) {
-    if (key in data) filtered[key] = data[key];
+
+  const toImport: Record<string, unknown> = {};
+
+  // Settings — run through saveSettings validation
+  if (data[STORAGE_KEYS.SETTINGS] && typeof data[STORAGE_KEYS.SETTINGS] === 'object') {
+    await saveSettings(data[STORAGE_KEYS.SETTINGS]);
   }
-  await browser.storage.local.set(filtered);
+
+  // Graveyard — validate each entry
+  if (Array.isArray(data[STORAGE_KEYS.GRAVEYARD])) {
+    const valid = data[STORAGE_KEYS.GRAVEYARD].filter((e: unknown) =>
+      typeof e === 'object' && e !== null &&
+      typeof (e as any).url === 'string' &&
+      typeof (e as any).title === 'string' &&
+      typeof (e as any).closedAt === 'number'
+    ).map((e: any) => ({
+      id: typeof e.id === 'string' ? e.id : `imported-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      url: e.url,
+      title: e.title,
+      faviconUrl: typeof e.faviconUrl === 'string' ? e.faviconUrl : '',
+      closedAt: e.closedAt,
+      domain: typeof e.domain === 'string' ? e.domain : '',
+    }));
+    toImport[STORAGE_KEYS.GRAVEYARD] = valid;
+  }
+
+  // Locked tabs — validate as number array
+  if (Array.isArray(data[STORAGE_KEYS.LOCKED_TABS])) {
+    toImport[STORAGE_KEYS.LOCKED_TABS] = data[STORAGE_KEYS.LOCKED_TABS].filter(
+      (id: unknown) => typeof id === 'number' && Number.isFinite(id)
+    );
+  }
+
+  if (Object.keys(toImport).length > 0) {
+    await browser.storage.local.set(toImport);
+  }
 }

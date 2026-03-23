@@ -41,6 +41,9 @@ The extension requires these browser permissions:
 | `alarms` | Run periodic checks for inactive tabs |
 | `storage` | Save settings and graveyard locally |
 | `scripting` | Inject content scripts for visual aging effects |
+| `notifications` | Show browser notification when a tab is auto-closed (with undo) |
+| `idle` | Pause aging timer when user is away from the computer |
+| `contextMenus` | Right-click "Lock tab" menu item |
 | Host permissions (`<all_urls>`) | Apply favicon dimming to any website |
 
 ## Changes

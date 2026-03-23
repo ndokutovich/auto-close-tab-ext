@@ -1,6 +1,6 @@
 import browser from 'webextension-polyfill';
 import type { AgingStage } from '../shared/types';
-import { getTabTimes, setTabTimes, getTabStages, setTabStages } from '../shared/storage';
+import { getTabTimes, setTabTimes, getTabStages, setTabStages, unlockTab } from '../shared/storage';
 
 // In-memory cache, flushed to storage when dirty
 let tabTimes: Record<number, number> = {};
@@ -133,6 +133,7 @@ export function setupTabListeners(): void {
 
   browser.tabs.onRemoved.addListener((tabId) => {
     removeTab(tabId);
+    unlockTab(tabId).catch(() => {});
   });
 
   // Track URL changes as activity (user navigated)
@@ -153,7 +154,8 @@ export function setupTabListeners(): void {
     browser.idle.onStateChanged.addListener((state) => {
       if (state === 'active') {
         if (idleSince !== null) {
-          const idleDuration = Date.now() - idleSince;
+          const MAX_IDLE_SHIFT = 24 * 60 * 60 * 1000;
+          const idleDuration = Math.max(0, Math.min(Date.now() - idleSince, MAX_IDLE_SHIFT));
           for (const idStr of Object.keys(tabTimes)) {
             tabTimes[Number(idStr)] += idleDuration;
           }

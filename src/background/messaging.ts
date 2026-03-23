@@ -103,7 +103,7 @@ export function setupMessageListener(): void {
 
         case 'REMOVE_GRAVEYARD_ENTRY':
           if (!isExtensionSender(sender)) return Promise.resolve({ ok: false });
-          return removeEntry(msg.closedAt).then(() => ({ ok: true }));
+          return removeEntry(msg.id).then(() => ({ ok: true }));
 
         case 'CLEAR_GRAVEYARD':
           if (!isExtensionSender(sender)) return Promise.resolve({ ok: false });
