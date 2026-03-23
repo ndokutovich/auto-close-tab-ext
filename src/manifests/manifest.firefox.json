@@ -46,6 +46,12 @@
     "gecko": {
       "id": "aging-tabs@ndokutovich.gmail.com",
       "strict_min_version": "121.0"
+    },
+    "gecko_android": {
+      "strict_min_version": "999.0"
     }
+  },
+  "data_collection_permissions": {
+    "data_not_collected": true
   }
 }
