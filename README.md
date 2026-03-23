@@ -74,6 +74,10 @@ npm run package:source               # create source .zip for AMO review
 - Security audited (SSRF protection, message sender validation, CSP, input sanitization)
 - Adversarial review: 8/8 bugs found and fixed
 
+## Note
+
+While Aging Tabs includes multiple safety nets (graveyard, notifications, lock, whitelist), we recommend pinning or locking your most important tabs. Closed tab data is stored locally and may be lost if you clear browser data or uninstall the extension.
+
 ## Privacy
 
 All data stays in your browser. No accounts, no servers, no tracking, no network requests. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md).

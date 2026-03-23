@@ -55,6 +55,9 @@ Pure TypeScript, no frameworks. Follows your browser's light/dark theme. Availab
 ### Inspired By
 Modern successor to the original Aging Tabs by Dao Gottwald (2008), which was lost when Firefox moved to WebExtensions in 2017.
 
+### Note
+While Aging Tabs includes multiple safety nets (graveyard, notifications, lock, whitelist), we recommend pinning or locking your most important tabs. Closed tab data is stored locally and may be lost if you clear browser data or uninstall the extension.
+
 ## Categories
 - Tabs
 
