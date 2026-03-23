@@ -5,38 +5,31 @@ import { msg } from '../shared/i18n';
 const MENU_ID = 'aging-tabs-lock-toggle';
 
 export function setupContextMenu(): void {
-  // Create the menu item once
-  browser.contextMenus.create({
-    id: MENU_ID,
-    title: msg('menuLockTab'),
-    contexts: ['tab'],
-  }, () => {
-    // Ignore "already exists" error on re-init
-    if (browser.runtime.lastError) { /* ok */ }
-  });
+  try {
+    if (!browser.contextMenus) return;
 
-  // Update title dynamically when menu is shown
-  if (browser.contextMenus.onShown) {
-    browser.contextMenus.onShown.addListener(async (info, tab) => {
-      if (!tab?.id) return;
-      const locked = await isTabLocked(tab.id);
-      browser.contextMenus.update(MENU_ID, {
-        title: locked ? msg('menuUnlockTab') : msg('menuLockTab'),
-      });
-      browser.contextMenus.refresh();
+    browser.contextMenus.create({
+      id: MENU_ID,
+      title: msg('menuLockTab'),
+      contexts: ['tab'],
     });
+  } catch {
+    // contextMenus may not be available
   }
 
-  // Handle click
-  browser.contextMenus.onClicked.addListener(async (info, tab) => {
-    if (info.menuItemId !== MENU_ID || !tab?.id) return;
-    const locked = await isTabLocked(tab.id);
-    if (locked) {
-      await unlockTab(tab.id);
-    } else {
-      await lockTab(tab.id);
-    }
-  });
+  try {
+    browser.contextMenus.onClicked.addListener(async (info, tab) => {
+      if (info.menuItemId !== MENU_ID || !tab?.id) return;
+      const locked = await isTabLocked(tab.id);
+      if (locked) {
+        await unlockTab(tab.id);
+      } else {
+        await lockTab(tab.id);
+      }
+    });
+  } catch {
+    // listener registration may fail
+  }
 }
 
 export async function toggleLockForTab(tabId: number): Promise<boolean> {

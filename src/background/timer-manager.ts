@@ -126,15 +126,20 @@ function showCloseNotification(tab: browser.Tabs.Tab): void {
 }
 
 export function setupNotificationListener(): void {
-  browser.notifications.onClicked.addListener(async (notifId: string) => {
-    if (!notifId.startsWith(NOTIF_PREFIX)) return;
+  try {
+    if (!browser.notifications?.onClicked) return;
+    browser.notifications.onClicked.addListener(async (notifId: string) => {
+      if (!notifId.startsWith(NOTIF_PREFIX)) return;
 
-    const graveyard = await getGraveyard();
-    if (graveyard.length > 0) {
-      const entry = graveyard[0];
-      await restoreTab(entry.url);
-      await removeEntry(entry.closedAt);
-    }
-    browser.notifications.clear(notifId).catch(() => {});
-  });
+      const graveyard = await getGraveyard();
+      if (graveyard.length > 0) {
+        const entry = graveyard[0];
+        await restoreTab(entry.url);
+        await removeEntry(entry.closedAt);
+      }
+      browser.notifications.clear(notifId).catch(() => {});
+    });
+  } catch {
+    // notifications may not be available
+  }
 }
