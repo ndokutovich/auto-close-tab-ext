@@ -2,6 +2,7 @@ import browser from 'webextension-polyfill';
 import type { GraveyardEntry } from '../shared/types';
 import { addToGraveyard, getGraveyard, removeFromGraveyard, clearGraveyard as storageClearGraveyard } from '../shared/storage';
 import { stripAgingPrefix, extractDomain } from '../shared/pure';
+import { BLINK_CLOSING_TEXT } from '../shared/constants';
 
 let idCounter = 0;
 
@@ -13,13 +14,20 @@ export async function buryTab(
   tab: browser.Tabs.Tab,
   maxSize: number
 ): Promise<GraveyardEntry> {
+  const domain = extractDomain(tab.url);
+  let title = stripAgingPrefix(tab.title || 'Untitled');
+  // Stage-4 blink replaces the entire title — original is unrecoverable
+  if (title === BLINK_CLOSING_TEXT) {
+    title = domain || 'Untitled';
+  }
+
   const entry: GraveyardEntry = {
     id: generateId(),
     url: tab.url || '',
-    title: stripAgingPrefix(tab.title || 'Untitled'),
+    title,
     faviconUrl: tab.favIconUrl || '',
     closedAt: Date.now(),
-    domain: extractDomain(tab.url),
+    domain,
   };
 
   const graveyard = await addToGraveyard(entry, maxSize);

@@ -4,7 +4,7 @@
  */
 
 import type { AgingStage, Settings, GraveyardEntry } from './types';
-import { MAX_STAGE } from './constants';
+import { MAX_STAGE, BLINK_CLOSING_TEXT } from './constants';
 
 /**
  * Compute the aging stage (0-4) based on elapsed time and total timeout.
@@ -91,7 +91,7 @@ export function isTabImmune(
 /**
  * Strip any known aging prefix from a title.
  */
-const KNOWN_PREFIXES = ['\u23f3 ', '\ud83d\udca4 ', '\ud83d\udc7b '];
+const KNOWN_PREFIXES = ['\u23f3 ', '\ud83d\udca4 ', '\ud83d\udc7b ', '\u26a0\ufe0f '];
 
 export function stripAgingPrefix(title: string): string {
   for (const prefix of KNOWN_PREFIXES) {

@@ -67,16 +67,18 @@ export async function reloadFromStorage(): Promise<void> {
   initialized = true;
 }
 
-export function recordActivation(tabId: number): void {
+export async function recordActivation(tabId: number): Promise<void> {
   tabTimes[tabId] = Date.now();
   tabStages[tabId] = 0;
   dirty = true;
+  await flush();
 }
 
-export function recordNewTab(tabId: number): void {
+export async function recordNewTab(tabId: number): Promise<void> {
   tabTimes[tabId] = Date.now();
   tabStages[tabId] = 0;
   dirty = true;
+  await flush();
 }
 
 export function removeTab(tabId: number): void {
@@ -115,19 +117,20 @@ let currentActiveTabId: number | undefined;
 export function setupTabListeners(): void {
   browser.tabs.onActivated.addListener(({ tabId }) => {
     // Update the tab we're LEAVING — its timer starts NOW, not when we arrived
-    if (currentActiveTabId !== undefined && currentActiveTabId !== tabId) {
-      recordActivation(currentActiveTabId);
-    }
-
-    // Update the tab we're ARRIVING at
+    const prev = currentActiveTabId;
     currentActiveTabId = tabId;
-    recordActivation(tabId);
+
+    const work = prev !== undefined && prev !== tabId
+      ? recordActivation(prev).then(() => recordActivation(tabId))
+      : recordActivation(tabId);
+
+    work.catch(() => {});
     browser.tabs.sendMessage(tabId, { type: 'RESET_AGING' }).catch(() => {});
   });
 
   browser.tabs.onCreated.addListener((tab) => {
     if (tab.id !== undefined) {
-      recordNewTab(tab.id);
+      recordNewTab(tab.id).catch(() => {});
     }
   });
 
@@ -139,7 +142,7 @@ export function setupTabListeners(): void {
   // Track URL changes as activity (user navigated)
   browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
     if (changeInfo.url) {
-      recordActivation(tabId);
+      recordActivation(tabId).catch(() => {});
       browser.tabs.sendMessage(tabId, { type: 'RESET_AGING' }).catch(() => {});
     }
   });

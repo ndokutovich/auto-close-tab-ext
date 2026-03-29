@@ -241,6 +241,16 @@ describe('stripAgingPrefix', () => {
   it('handles empty string', () => {
     expect(stripAgingPrefix('')).toBe('');
   });
+
+  // BUG REPRO: stage-4 blink replaces entire title with '⚠️ Closing soon...'
+  // stripAgingPrefix must handle this so graveyard stores the original title
+  it('strips warning prefix from blink text', () => {
+    expect(stripAgingPrefix('\u26a0\ufe0f Closing soon...')).toBe('Closing soon...');
+  });
+
+  it('strips warning prefix from blink text with original title', () => {
+    expect(stripAgingPrefix('\u26a0\ufe0f My Tab')).toBe('My Tab');
+  });
 });
 
 // --- capGraveyard ---

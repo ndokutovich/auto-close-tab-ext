@@ -1,5 +1,5 @@
 import type { AgingStage } from '../shared/types';
-import { STAGE_PREFIX } from '../shared/constants';
+import { STAGE_PREFIX, BLINK_CLOSING_TEXT } from '../shared/constants';
 import { stripAgingPrefix } from '../shared/pure';
 
 let originalTitle: string | null = null;
@@ -43,7 +43,7 @@ function startBlink(stage: AgingStage): void {
     ignoreNextMutation = true;
     blinkState = !blinkState;
     if (stage === 4) {
-      document.title = blinkState ? '\u26a0\ufe0f Closing soon...' : baseTitle;
+      document.title = blinkState ? '\u26a0\ufe0f ' + BLINK_CLOSING_TEXT : baseTitle;
     } else {
       // Stage 3: subtle — blink between prefix and no prefix
       const prefix = STAGE_PREFIX[stage];

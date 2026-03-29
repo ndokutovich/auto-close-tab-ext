@@ -45,6 +45,9 @@ export const STORAGE_KEYS = {
 // Number of aging stages (0-4)
 export const MAX_STAGE: AgingStage = 4;
 
+// Stage-4 blink replacement text (original title is unrecoverable from this)
+export const BLINK_CLOSING_TEXT = 'Closing soon...';
+
 // Fallback favicon for tabs with no or broken favicon
 export const FALLBACK_FAVICON = 'data:image/svg+xml,' + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect fill="#3f3f46" width="16" height="16" rx="2"/></svg>'
