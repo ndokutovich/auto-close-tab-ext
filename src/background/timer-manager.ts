@@ -16,7 +16,11 @@ import { buildImmunityContext, isImmune } from './immunity';
 import { buryTab, restoreTab, removeEntry } from './graveyard';
 
 export async function startTimer(): Promise<void> {
-  await browser.alarms.clear(ALARM_NAME);
+  // Alarms persist across SW restarts in MV3. Don't recreate if already scheduled —
+  // recreation resets the countdown, so frequent SW wake-ups would indefinitely
+  // delay the aging alarm from firing.
+  const existing = await browser.alarms.get(ALARM_NAME);
+  if (existing) return;
   await browser.alarms.create(ALARM_NAME, {
     periodInMinutes: CHECK_INTERVAL_SECONDS / 60,
   });

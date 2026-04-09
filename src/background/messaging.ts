@@ -2,7 +2,7 @@ import browser from 'webextension-polyfill';
 import type { ExtensionMessage } from '../shared/types';
 import { getSettings, saveSettings, getGraveyard, getLockedTabs, lockTab, unlockTab, exportAllData, importData } from '../shared/storage';
 import { restoreTab, removeEntry, clearAll } from './graveyard';
-import { getAllTrackedTabIds, getLastAccessed, getStage } from './tab-tracker';
+import { getAllTrackedTabIds, getLastAccessed, getStage, ensureReady } from './tab-tracker';
 
 function isExtensionSender(sender: browser.Runtime.MessageSender): boolean {
   const extOrigin = browser.runtime.getURL('');
@@ -83,17 +83,19 @@ export function setupMessageListener(): void {
         case 'GET_SETTINGS':
           return getSettings();
 
-        case 'GET_TAB_STATES': {
-          const ids = getAllTrackedTabIds();
-          const states: Record<number, { lastAccessed: number; stage: number }> = {};
-          for (const id of ids) {
-            const lastAccessed = getLastAccessed(id);
-            if (lastAccessed !== undefined) {
-              states[id] = { lastAccessed, stage: getStage(id) };
+        case 'GET_TAB_STATES':
+          // Wait for tracker init — popup might open during SW cold start
+          return ensureReady().then(() => {
+            const ids = getAllTrackedTabIds();
+            const states: Record<number, { lastAccessed: number; stage: number }> = {};
+            for (const id of ids) {
+              const lastAccessed = getLastAccessed(id);
+              if (lastAccessed !== undefined) {
+                states[id] = { lastAccessed, stage: getStage(id) };
+              }
             }
-          }
-          return Promise.resolve(states);
-        }
+            return states;
+          });
 
         // --- Privileged operations (extension pages only) ---
 

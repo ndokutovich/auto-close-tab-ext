@@ -2,23 +2,36 @@ import browser from 'webextension-polyfill';
 import { ensureReady, setupTabListeners } from './tab-tracker';
 import { startTimer, onAlarmFired, setupNotificationListener } from './timer-manager';
 import { setupMessageListener } from './messaging';
-import { setupContextMenu, toggleLockForTab } from './context-menu';
+import { setupContextMenuListeners, createContextMenuItems, toggleLockForTab } from './context-menu';
 import { syncBadge } from './graveyard';
 import { isRestrictedUrl } from '../shared/pure';
 
-// Register listeners synchronously to avoid dropped events in MV3 wake-ups
+// Register all listeners synchronously at module load. MV3 requires this so
+// wake-up events are not dropped before async init completes.
 setupTabListeners();
 setupMessageListener();
 setupNotificationListener();
-setupContextMenu();
+setupContextMenuListeners();
 setupKeyboardShortcuts();
 browser.alarms.onAlarm.addListener(onAlarmFired);
 
-async function init(freshInstall = false): Promise<void> {
+// Ensure the aging alarm exists on every SW load. startTimer is idempotent —
+// if the alarm already exists (persisted across SW restarts), this is a cheap
+// no-op. This guards against edge cases where the alarm was never created
+// (e.g., onInstalled didn't fire reliably) without resetting the countdown.
+startTimer().catch(err => console.error('[Aging Tabs] startTimer error:', err));
+
+// Full initialization — only runs on browser startup or extension install/update,
+// NOT on every SW wake-up. Alarms and context menus persist across SW restarts,
+// so recreating them on each wake-up would reset timers and spam errors.
+async function init(freshInstall: boolean): Promise<void> {
   try {
     await ensureReady(freshInstall);
     await startTimer();
     await syncBadge();
+    if (freshInstall) {
+      createContextMenuItems();
+    }
   } catch (err) {
     console.error('[Aging Tabs] Init error:', err);
   }
@@ -56,13 +69,11 @@ async function injectContentScripts(): Promise<void> {
   }
 }
 
-// Service worker / background script startup
-init();
-
-// Re-init on browser startup
-browser.runtime.onStartup.addListener(() => init());
-
-// Handle extension install/update
+// Full init only on real startup/install events. Regular SW wake-ups
+// rely on lazy ensureReady() from inside event listeners.
+browser.runtime.onStartup.addListener(() => init(false));
 browser.runtime.onInstalled.addListener((details) => {
   init(details.reason === 'install');
+  // Always recreate menu items on install/update (handles permission changes)
+  createContextMenuItems();
 });

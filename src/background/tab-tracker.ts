@@ -161,26 +161,34 @@ export function setupTabListeners(): void {
 
     browser.idle.setDetectionInterval(60);
 
-    browser.idle.onStateChanged.addListener(async (state) => {
-      await ensureReady();
-      if (state === 'active') {
-        if (idleSince !== null) {
-          const MAX_IDLE_SHIFT = 24 * 60 * 60 * 1000;
-          const idleDuration = Math.max(0, Math.min(Date.now() - idleSince, MAX_IDLE_SHIFT));
-          for (const idStr of Object.keys(tabTimes)) {
-            tabTimes[Number(idStr)] += idleDuration;
+    // Serialize all idle state transitions through a single chain to eliminate
+    // the set/remove race when idle → active → idle fires in rapid succession.
+    let idleOpChain: Promise<void> = Promise.resolve();
+
+    browser.idle.onStateChanged.addListener((state) => {
+      idleOpChain = idleOpChain.then(async () => {
+        await ensureReady();
+        if (state === 'active') {
+          if (idleSince !== null) {
+            const MAX_IDLE_SHIFT = 24 * 60 * 60 * 1000;
+            const idleDuration = Math.max(0, Math.min(Date.now() - idleSince, MAX_IDLE_SHIFT));
+            for (const idStr of Object.keys(tabTimes)) {
+              tabTimes[Number(idStr)] += idleDuration;
+            }
+            dirty = true;
+            idleSince = null;
+            await browser.storage.local.remove('idleSince');
+            await flush();
           }
-          dirty = true;
-          idleSince = null;
-          await browser.storage.local.remove('idleSince');
-          await flush();
+        } else {
+          if (idleSince === null) {
+            idleSince = Date.now();
+            await browser.storage.local.set({ idleSince });
+          }
         }
-      } else {
-        if (idleSince === null) {
-          idleSince = Date.now();
-          await browser.storage.local.set({ idleSince });
-        }
-      }
+      }).catch((err) => {
+        console.warn('[Aging Tabs] idle handler error:', err);
+      });
     });
   } catch {
     // idle API may not be available

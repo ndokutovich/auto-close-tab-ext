@@ -4,15 +4,21 @@ import { msg } from '../shared/i18n';
 
 const MENU_ID = 'aging-tabs-lock-toggle';
 
-export function setupContextMenu(): void {
+// Per-tab serialization of lock/unlock ops to avoid check-then-act races
+// when users rapid-click the menu item or press the hotkey quickly.
+const lockOps = new Map<number, Promise<unknown>>();
+
+function serializePerTab<T>(tabId: number, op: () => Promise<T>): Promise<T> {
+  const prev = lockOps.get(tabId) ?? Promise.resolve();
+  const next = prev.then(op, op);
+  lockOps.set(tabId, next.catch(() => {}));
+  return next;
+}
+
+// Register listeners synchronously — must happen at module load for MV3 wake-ups.
+export function setupContextMenuListeners(): void {
   try {
     if (!browser.contextMenus) return;
-
-    browser.contextMenus.create({
-      id: MENU_ID,
-      title: msg('menuLockTab'),
-      contexts: ['tab'],
-    });
 
     // Dynamically update menu title to show current lock state
     try {
@@ -36,25 +42,37 @@ export function setupContextMenu(): void {
 
     browser.contextMenus.onClicked.addListener(async (info, tab) => {
       if (info.menuItemId !== MENU_ID || !tab?.id) return;
-      const locked = await isTabLocked(tab.id);
-      if (locked) {
-        await unlockTab(tab.id);
-      } else {
-        await lockTab(tab.id);
-      }
+      await toggleLockForTab(tab.id);
     });
   } catch {
     // contextMenus may not be available
   }
 }
 
+// Called only once on install/update to avoid "duplicate ID" errors on wake-up.
+export function createContextMenuItems(): void {
+  try {
+    if (!browser.contextMenus) return;
+    browser.contextMenus.removeAll().then(() => {
+      browser.contextMenus.create({
+        id: MENU_ID,
+        title: msg('menuLockTab'),
+        contexts: ['tab'],
+      });
+    }).catch(() => {});
+  } catch {
+    // contextMenus may not be available
+  }
+}
+
 export async function toggleLockForTab(tabId: number): Promise<boolean> {
-  const locked = await isTabLocked(tabId);
-  if (locked) {
-    await unlockTab(tabId);
-    return false;
-  } else {
+  return serializePerTab(tabId, async () => {
+    const locked = await isTabLocked(tabId);
+    if (locked) {
+      await unlockTab(tabId);
+      return false;
+    }
     await lockTab(tabId);
     return true;
-  }
+  });
 }
