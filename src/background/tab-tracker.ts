@@ -1,6 +1,10 @@
 import browser from 'webextension-polyfill';
 import type { AgingStage } from '../shared/types';
-import { getTabTimes, setTabTimes, getTabStages, setTabStages, unlockTab } from '../shared/storage';
+import {
+  getTabTimes, setTabTimes, getTabStages, setTabStages, unlockTab,
+  getPausedSince, setPausedSince,
+} from '../shared/storage';
+import { shiftTabTimes } from '../shared/pure';
 
 // In-memory cache, flushed to storage when dirty
 let tabTimes: Record<number, number> = {};
@@ -8,6 +12,7 @@ let tabStages: Record<number, AgingStage> = {};
 let initialized = false;
 let dirty = false;
 let idleSince: number | null = null;
+let pausedSince: number | null = null;
 
 let initPromise: Promise<void> | null = null;
 
@@ -24,9 +29,11 @@ export async function initTracker(freshInstall = false): Promise<void> {
   // Load persisted state
   tabTimes = await getTabTimes();
   tabStages = await getTabStages();
-  
+
   const idleRes = await browser.storage.local.get('idleSince');
   idleSince = typeof idleRes.idleSince === 'number' ? idleRes.idleSince : null;
+
+  pausedSince = await getPausedSince();
 
   // Reconcile with currently open tabs
   const tabs = await browser.tabs.query({});
@@ -69,6 +76,44 @@ export async function initTracker(freshInstall = false): Promise<void> {
 
 export function isLoaded(): boolean {
   return initialized;
+}
+
+// --- Pause API ---
+
+export function isPaused(): boolean {
+  return pausedSince !== null;
+}
+
+export function getPausedSinceInternal(): number | null {
+  return pausedSince;
+}
+
+/**
+ * Toggle the global pause state. On unpause, shifts all tabTimes forward
+ * by the pause duration (capped at `now` for tabs activated during pause).
+ */
+export async function setPause(paused: boolean): Promise<void> {
+  await ensureReady();
+  if (paused) {
+    if (pausedSince !== null) return; // already paused
+    pausedSince = Date.now();
+    await setPausedSince(pausedSince);
+  } else {
+    if (pausedSince === null) return; // already running
+    const now = Date.now();
+    const shiftMs = Math.max(0, now - pausedSince);
+    shiftTabTimes(tabTimes, shiftMs, now);
+    dirty = true;
+    pausedSince = null;
+    await setPausedSince(null);
+    await flush();
+    // If we were idle at any point during the pause, reset the idle tracker
+    // so post-unpause idle compensation starts fresh from now.
+    if (idleSince !== null) {
+      idleSince = now;
+      await browser.storage.local.set({ idleSince: now });
+    }
+  }
 }
 
 export async function recordActivation(tabId: number): Promise<void> {
@@ -168,13 +213,16 @@ export function setupTabListeners(): void {
     browser.idle.onStateChanged.addListener((state) => {
       idleOpChain = idleOpChain.then(async () => {
         await ensureReady();
+        // While globally paused, pause handles all time accounting.
+        // Idle tracking is suppressed to avoid double-compensation.
+        if (pausedSince !== null) return;
+
         if (state === 'active') {
           if (idleSince !== null) {
             const MAX_IDLE_SHIFT = 24 * 60 * 60 * 1000;
-            const idleDuration = Math.max(0, Math.min(Date.now() - idleSince, MAX_IDLE_SHIFT));
-            for (const idStr of Object.keys(tabTimes)) {
-              tabTimes[Number(idStr)] += idleDuration;
-            }
+            const now = Date.now();
+            const idleDuration = Math.max(0, Math.min(now - idleSince, MAX_IDLE_SHIFT));
+            shiftTabTimes(tabTimes, idleDuration, now);
             dirty = true;
             idleSince = null;
             await browser.storage.local.remove('idleSince');

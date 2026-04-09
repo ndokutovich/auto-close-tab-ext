@@ -2,7 +2,8 @@ import browser from 'webextension-polyfill';
 import type { ExtensionMessage } from '../shared/types';
 import { getSettings, saveSettings, getGraveyard, getLockedTabs, lockTab, unlockTab, exportAllData, importData } from '../shared/storage';
 import { restoreTab, removeEntry, clearAll } from './graveyard';
-import { getAllTrackedTabIds, getLastAccessed, getStage, ensureReady } from './tab-tracker';
+import { getAllTrackedTabIds, getLastAccessed, getStage, ensureReady, isPaused, setPause } from './tab-tracker';
+import { syncBadge } from './graveyard';
 
 function isExtensionSender(sender: browser.Runtime.MessageSender): boolean {
   const extOrigin = browser.runtime.getURL('');
@@ -125,6 +126,15 @@ export function setupMessageListener(): void {
 
         case 'GET_LOCKED_TABS':
           return getLockedTabs();
+
+        case 'GET_PAUSE_STATE':
+          return ensureReady().then(() => ({ paused: isPaused() }));
+
+        case 'SET_PAUSE_STATE':
+          if (!isExtensionSender(sender)) return Promise.resolve({ ok: false });
+          return setPause(!!msg.paused)
+            .then(() => syncBadge())
+            .then(() => ({ ok: true, paused: isPaused() }));
 
         case 'EXPORT_DATA':
           if (!isExtensionSender(sender)) return Promise.resolve({ ok: false });

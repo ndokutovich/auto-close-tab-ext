@@ -11,6 +11,7 @@ import {
   getStage,
   setStage,
   flush,
+  isPaused,
 } from './tab-tracker';
 import { buildImmunityContext, isImmune } from './immunity';
 import { buryTab, restoreTab, removeEntry } from './graveyard';
@@ -37,6 +38,10 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
   if (alarm.name !== ALARM_NAME) return;
 
   await ensureReady();
+
+  // Globally paused — skip stage progression and closures entirely.
+  // Timers will resume from frozen state when unpaused.
+  if (isPaused()) return;
 
   const settings = await getSettings();
   const timeoutMs = settings.timeoutMinutes * 60 * 1000;

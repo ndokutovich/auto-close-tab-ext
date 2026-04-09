@@ -12,6 +12,11 @@
   "clearAll": { "message": "Clear all" },
   "removeFromList": { "message": "Remove from list" },
 
+  "pauseAging": { "message": "Pause aging" },
+  "resumeAging": { "message": "Resume aging" },
+  "statusPaused": { "message": "Aging paused" },
+  "statusRunning": { "message": "Aging active" },
+
   "optionsTitle": { "message": "Aging Tabs" },
   "optionsSubtitle": { "message": "Configure auto-close behavior and visual aging" },
 

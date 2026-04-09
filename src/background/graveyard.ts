@@ -3,6 +3,7 @@ import type { GraveyardEntry } from '../shared/types';
 import { addToGraveyard, getGraveyard, removeFromGraveyard, clearGraveyard as storageClearGraveyard } from '../shared/storage';
 import { stripAgingPrefix, extractDomain } from '../shared/pure';
 import { BLINK_CLOSING_TEXT } from '../shared/constants';
+import { isPaused } from './tab-tracker';
 
 let idCounter = 0;
 
@@ -59,6 +60,13 @@ export async function syncBadge(): Promise<void> {
 }
 
 async function updateBadge(count: number): Promise<void> {
+  // Pause indicator takes precedence over graveyard count — it's actionable
+  // state the user needs to see immediately.
+  if (isPaused()) {
+    await browser.action.setBadgeText({ text: '\u2016' }); // ‖ double vertical line
+    await browser.action.setBadgeBackgroundColor({ color: '#f59e0b' }); // amber
+    return;
+  }
   const text = count > 0 ? String(count) : '';
   await browser.action.setBadgeText({ text });
   if (count > 0) {

@@ -100,6 +100,26 @@ export async function clearGraveyard(): Promise<void> {
   await browser.storage.local.set({ [STORAGE_KEYS.GRAVEYARD]: [] });
 }
 
+// --- Pause state ---
+
+export async function getPausedSince(): Promise<number | null> {
+  try {
+    const result = await browser.storage.local.get(STORAGE_KEYS.PAUSED_SINCE);
+    const value = result[STORAGE_KEYS.PAUSED_SINCE];
+    return typeof value === 'number' && Number.isFinite(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function setPausedSince(value: number | null): Promise<void> {
+  if (value === null) {
+    await browser.storage.local.remove(STORAGE_KEYS.PAUSED_SINCE);
+  } else {
+    await browser.storage.local.set({ [STORAGE_KEYS.PAUSED_SINCE]: value });
+  }
+}
+
 // --- Locked tabs ---
 
 export async function getLockedTabs(): Promise<number[]> {

@@ -154,3 +154,27 @@ export function capGraveyard<T>(entries: T[], maxSize: number): T[] {
   if (entries.length <= maxSize) return entries;
   return entries.slice(0, maxSize);
 }
+
+/**
+ * Shift tab last-accessed timestamps forward by a pause/idle duration.
+ * Tabs activated DURING the pause (lastAccessed > pausedSince) would end up
+ * with `old + shift > now` — we clamp to `now` so their elapsed stays >= 0
+ * (effectively "just accessed" when pause ends).
+ *
+ * Formula: new = min(old + shiftMs, now)
+ *
+ * Mutates the input in-place and returns it.
+ */
+export function shiftTabTimes(
+  tabTimes: Record<number, number>,
+  shiftMs: number,
+  now: number
+): Record<number, number> {
+  if (shiftMs <= 0) return tabTimes;
+  for (const idStr of Object.keys(tabTimes)) {
+    const id = Number(idStr);
+    const shifted = tabTimes[id] + shiftMs;
+    tabTimes[id] = shifted > now ? now : shifted;
+  }
+  return tabTimes;
+}

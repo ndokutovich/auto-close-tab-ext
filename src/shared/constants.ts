@@ -40,6 +40,7 @@ export const STORAGE_KEYS = {
   TAB_STAGES: 'tabStages',
   GRAVEYARD: 'graveyard',
   LOCKED_TABS: 'lockedTabs',
+  PAUSED_SINCE: 'pausedSince',
 } as const;
 
 // Number of aging stages (0-4)

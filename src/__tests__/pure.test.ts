@@ -8,6 +8,7 @@ import {
   isTabImmune,
   stripAgingPrefix,
   capGraveyard,
+  shiftTabTimes,
   type TabProps,
 } from '../shared/pure';
 
@@ -269,5 +270,68 @@ describe('capGraveyard', () => {
   it('truncates to maxSize, keeping newest (first)', () => {
     const entries = [1, 2, 3, 4, 5];
     expect(capGraveyard(entries, 3)).toEqual([1, 2, 3]);
+  });
+});
+
+// --- shiftTabTimes (pause/idle compensation) ---
+
+describe('shiftTabTimes', () => {
+  it('shifts pre-pause tabs forward by the full duration', () => {
+    const now = 10_000;
+    const pausedSince = 5_000;
+    const shiftMs = now - pausedSince;
+    const tabs = { 1: 3_000, 2: 4_500 }; // both activated before pause
+    shiftTabTimes(tabs, shiftMs, now);
+    expect(tabs).toEqual({ 1: 8_000, 2: 9_500 });
+    // elapsed for tab 1: 10000 - 8000 = 2000 (same as pre-pause: 5000 - 3000 = 2000) ✅
+  });
+
+  it('clamps tabs activated DURING the pause to `now`', () => {
+    const now = 10_000;
+    const pausedSince = 5_000;
+    const shiftMs = now - pausedSince;
+    // Tab 3 was activated mid-pause — naive shift would put it in the future
+    const tabs = { 3: 7_000 };
+    shiftTabTimes(tabs, shiftMs, now);
+    // 7000 + 5000 = 12000 > now → clamped to now (elapsed = 0, "fresh")
+    expect(tabs[3]).toBe(10_000);
+  });
+
+  it('handles a mix of pre-pause and mid-pause tabs', () => {
+    const now = 10_000;
+    const shiftMs = 5_000;
+    const tabs = {
+      1: 2_000,   // pre-pause
+      2: 6_500,   // mid-pause (6500 + 5000 = 11500 > 10000)
+      3: 4_999,   // edge: just before pause (4999 + 5000 = 9999 < 10000)
+    };
+    shiftTabTimes(tabs, shiftMs, now);
+    expect(tabs[1]).toBe(7_000);
+    expect(tabs[2]).toBe(10_000); // clamped
+    expect(tabs[3]).toBe(9_999);
+  });
+
+  it('is a no-op when shiftMs is 0 or negative', () => {
+    const tabs = { 1: 100, 2: 200 };
+    const before = { ...tabs };
+    shiftTabTimes(tabs, 0, 1000);
+    expect(tabs).toEqual(before);
+    shiftTabTimes(tabs, -500, 1000);
+    expect(tabs).toEqual(before);
+  });
+
+  it('preserves elapsed time for a pre-pause tab across the shift', () => {
+    // The key property: elapsed = now - lastAccessed should be preserved
+    // for tabs that were active before the pause began.
+    const beforePause = 100_000;
+    const lastAccessed = 85_000; // elapsed at beforePause = 15_000
+    const pauseDuration = 30_000;
+    const nowAfter = beforePause + pauseDuration;
+
+    const tabs = { 1: lastAccessed };
+    shiftTabTimes(tabs, pauseDuration, nowAfter);
+
+    const elapsedAfter = nowAfter - tabs[1];
+    expect(elapsedAfter).toBe(15_000); // same as before the pause
   });
 });

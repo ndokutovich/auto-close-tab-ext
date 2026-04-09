@@ -64,6 +64,45 @@ body {
   border-bottom: 1px solid var(--border);
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Pause button is neutral when running, amber when paused */
+#btn-pause.is-paused {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+}
+
+#btn-pause.is-paused:hover {
+  background: rgba(245, 158, 11, 0.22);
+}
+
+.pause-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+  font-size: 12px;
+  font-weight: 500;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+@media (prefers-color-scheme: dark) {
+  .pause-banner {
+    color: #fbbf24;
+    background: rgba(245, 158, 11, 0.15);
+  }
+}
+
+.pause-banner-icon {
+  font-size: 14px;
+}
+
 .title {
   font-size: 15px;
   font-weight: 600;

@@ -9,8 +9,18 @@
   <div class="popup">
     <header class="header">
       <h1 class="title" data-i18n="popupTitle">Aging Tabs</h1>
-      <button id="btn-options" class="btn-icon" title="Settings">&#9881;</button>
+      <div class="header-actions">
+        <button id="btn-pause" class="btn-icon" title="" aria-pressed="false">
+          <span class="pause-icon" aria-hidden="true">&#9208;</span>
+        </button>
+        <button id="btn-options" class="btn-icon" title="Settings">&#9881;</button>
+      </div>
     </header>
+
+    <div id="pause-banner" class="pause-banner" hidden>
+      <span class="pause-banner-icon" aria-hidden="true">&#9208;</span>
+      <span data-i18n="statusPaused">Aging paused</span>
+    </div>
 
     <div class="search-bar">
       <input type="text" id="search" data-i18n-placeholder="searchPlaceholder" placeholder="Search closed tabs..." autocomplete="off">

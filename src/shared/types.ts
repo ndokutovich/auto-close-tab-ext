@@ -59,6 +59,8 @@ export type UiToBgMsg =
   | { type: 'LOCK_TAB'; tabId: number }
   | { type: 'UNLOCK_TAB'; tabId: number }
   | { type: 'GET_LOCKED_TABS' }
+  | { type: 'GET_PAUSE_STATE' }
+  | { type: 'SET_PAUSE_STATE'; paused: boolean }
   | { type: 'EXPORT_DATA' }
   | { type: 'IMPORT_DATA'; data: string };
 
@@ -66,7 +68,8 @@ export type UiToBgMsg =
 
 export type BgToUiMsg =
   | { type: 'GRAVEYARD_UPDATED'; count: number }
-  | { type: 'SETTINGS_UPDATED'; settings: Settings };
+  | { type: 'SETTINGS_UPDATED'; settings: Settings }
+  | { type: 'PAUSE_STATE_CHANGED'; paused: boolean };
 
 // --- Union for runtime.onMessage ---
 
@@ -80,4 +83,8 @@ export interface StorageSchema {
   tabStages: Record<number, AgingStage>;
   graveyard: GraveyardEntry[];
   lockedTabs: number[];
+  // Timestamp when aging was globally paused. null = not paused.
+  // On unpause, all tabTimes are shifted forward by (now - pausedSince),
+  // capped at `now` for tabs activated during the pause.
+  pausedSince: number | null;
 }
