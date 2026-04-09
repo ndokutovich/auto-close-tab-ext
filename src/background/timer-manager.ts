@@ -5,8 +5,7 @@ import { computeAgingStage, extractDomain } from '../shared/pure';
 import { msg } from '../shared/i18n';
 import { getSettings, getGraveyard, getLockedTabs } from '../shared/storage';
 import {
-  ensureLoaded,
-  reloadFromStorage,
+  ensureReady,
   getAllTrackedTabIds,
   getLastAccessed,
   getStage,
@@ -24,11 +23,16 @@ export async function startTimer(): Promise<void> {
 }
 
 export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
+  // Short-circuit notification-clear alarms — they don't need tracker state
+  if (alarm.name.startsWith('clear-notif-')) {
+    const notifId = alarm.name.replace('clear-notif-', '');
+    browser.notifications.clear(notifId).catch(() => {});
+    return;
+  }
+
   if (alarm.name !== ALARM_NAME) return;
 
-  if (!ensureLoaded()) {
-    await reloadFromStorage();
-  }
+  await ensureReady();
 
   const settings = await getSettings();
   const timeoutMs = settings.timeoutMinutes * 60 * 1000;
@@ -120,8 +124,14 @@ function showCloseNotification(tab: browser.Tabs.Tab, entryId: string): void {
     console.warn('[Aging Tabs] Notification failed:', err);
   });
 
+  // Chrome clamps alarm delays to a 30s minimum in release builds, so 0.5 is the
+  // smallest honored value. Serves as fallback if SW dies before setTimeout fires.
+  const clearAlarmName = `clear-notif-${notifId}`;
+  browser.alarms.create(clearAlarmName, { delayInMinutes: 0.5 });
+
   setTimeout(() => {
     browser.notifications.clear(notifId).catch(() => {});
+    browser.alarms.clear(clearAlarmName).catch(() => {});
   }, 8000);
 }
 

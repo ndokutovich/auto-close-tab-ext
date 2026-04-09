@@ -117,9 +117,11 @@ listEl.addEventListener('click', async (e) => {
   }
 
   const url = item.dataset.url;
+  const id = item.dataset.entryId!;
   if (url) {
     await browser.runtime.sendMessage({ type: 'RESTORE_TAB', url });
-    await loadGraveyard();
+    await browser.runtime.sendMessage({ type: 'REMOVE_GRAVEYARD_ENTRY', id });
+    window.close();
   }
 });
 

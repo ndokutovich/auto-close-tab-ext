@@ -7,6 +7,16 @@ let tabTimes: Record<number, number> = {};
 let tabStages: Record<number, AgingStage> = {};
 let initialized = false;
 let dirty = false;
+let idleSince: number | null = null;
+
+let initPromise: Promise<void> | null = null;
+
+export function ensureReady(freshInstall = false): Promise<void> {
+  if (!initPromise) {
+    initPromise = initTracker(freshInstall);
+  }
+  return initPromise;
+}
 
 export async function initTracker(freshInstall = false): Promise<void> {
   if (initialized) return;
@@ -14,6 +24,9 @@ export async function initTracker(freshInstall = false): Promise<void> {
   // Load persisted state
   tabTimes = await getTabTimes();
   tabStages = await getTabStages();
+  
+  const idleRes = await browser.storage.local.get('idleSince');
+  idleSince = typeof idleRes.idleSince === 'number' ? idleRes.idleSince : null;
 
   // Reconcile with currently open tabs
   const tabs = await browser.tabs.query({});
@@ -54,17 +67,8 @@ export async function initTracker(freshInstall = false): Promise<void> {
   initialized = true;
 }
 
-export function ensureLoaded(): boolean {
+export function isLoaded(): boolean {
   return initialized;
-}
-
-// Called when Chrome kills the service worker and we need to reload from storage
-export async function reloadFromStorage(): Promise<void> {
-  tabTimes = await getTabTimes();
-  tabStages = await getTabStages();
-  const activeTabs = await browser.tabs.query({ active: true, currentWindow: true });
-  if (activeTabs[0]?.id) currentActiveTabId = activeTabs[0].id;
-  initialized = true;
 }
 
 export async function recordActivation(tabId: number): Promise<void> {
@@ -115,7 +119,8 @@ export async function flush(): Promise<void> {
 let currentActiveTabId: number | undefined;
 
 export function setupTabListeners(): void {
-  browser.tabs.onActivated.addListener(({ tabId }) => {
+  browser.tabs.onActivated.addListener(async ({ tabId }) => {
+    await ensureReady();
     // Update the tab we're LEAVING — its timer starts NOW, not when we arrived
     const prev = currentActiveTabId;
     currentActiveTabId = tabId;
@@ -128,19 +133,22 @@ export function setupTabListeners(): void {
     browser.tabs.sendMessage(tabId, { type: 'RESET_AGING' }).catch(() => {});
   });
 
-  browser.tabs.onCreated.addListener((tab) => {
+  browser.tabs.onCreated.addListener(async (tab) => {
+    await ensureReady();
     if (tab.id !== undefined) {
       recordNewTab(tab.id).catch(() => {});
     }
   });
 
-  browser.tabs.onRemoved.addListener((tabId) => {
+  browser.tabs.onRemoved.addListener(async (tabId) => {
+    await ensureReady();
     removeTab(tabId);
     unlockTab(tabId).catch(() => {});
   });
 
   // Track URL changes as activity (user navigated)
-  browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  browser.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
+    await ensureReady();
     if (changeInfo.url) {
       recordActivation(tabId).catch(() => {});
       browser.tabs.sendMessage(tabId, { type: 'RESET_AGING' }).catch(() => {});
@@ -151,10 +159,10 @@ export function setupTabListeners(): void {
   try {
     if (!browser.idle?.onStateChanged) return;
 
-    let idleSince: number | null = null;
     browser.idle.setDetectionInterval(60);
 
-    browser.idle.onStateChanged.addListener((state) => {
+    browser.idle.onStateChanged.addListener(async (state) => {
+      await ensureReady();
       if (state === 'active') {
         if (idleSince !== null) {
           const MAX_IDLE_SHIFT = 24 * 60 * 60 * 1000;
@@ -164,10 +172,13 @@ export function setupTabListeners(): void {
           }
           dirty = true;
           idleSince = null;
+          await browser.storage.local.remove('idleSince');
+          await flush();
         }
       } else {
         if (idleSince === null) {
           idleSince = Date.now();
+          await browser.storage.local.set({ idleSince });
         }
       }
     });

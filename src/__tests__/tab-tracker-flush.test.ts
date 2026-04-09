@@ -1,7 +1,7 @@
 /**
  * BUG REPRO: recordActivation() resets in-memory state but never flushes
  * to storage. If the MV3 service worker dies before the next alarm tick,
- * reloadFromStorage() loads stale timestamps — the tab jumps from stage 0
+ * init from storage loads stale timestamps — the tab jumps from stage 0
  * to a high stage, skipping all intermediate steps.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';

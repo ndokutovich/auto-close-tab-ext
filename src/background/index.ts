@@ -1,27 +1,22 @@
 import browser from 'webextension-polyfill';
-import { initTracker, setupTabListeners } from './tab-tracker';
+import { ensureReady, setupTabListeners } from './tab-tracker';
 import { startTimer, onAlarmFired, setupNotificationListener } from './timer-manager';
 import { setupMessageListener } from './messaging';
 import { setupContextMenu, toggleLockForTab } from './context-menu';
 import { syncBadge } from './graveyard';
 import { isRestrictedUrl } from '../shared/pure';
 
-let listenersRegistered = false;
+// Register listeners synchronously to avoid dropped events in MV3 wake-ups
+setupTabListeners();
+setupMessageListener();
+setupNotificationListener();
+setupContextMenu();
+setupKeyboardShortcuts();
+browser.alarms.onAlarm.addListener(onAlarmFired);
 
 async function init(freshInstall = false): Promise<void> {
   try {
-    await initTracker(freshInstall);
-
-    if (!listenersRegistered) {
-      setupTabListeners();
-      setupMessageListener();
-      setupNotificationListener();
-      setupContextMenu();
-      setupKeyboardShortcuts();
-      browser.alarms.onAlarm.addListener(onAlarmFired);
-      listenersRegistered = true;
-    }
-
+    await ensureReady(freshInstall);
     await startTimer();
     await syncBadge();
   } catch (err) {

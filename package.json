@@ -1,6 +1,6 @@
 {
   "name": "aging-tabs",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "description": "Auto-close inactive tabs with visual aging feedback",
   "scripts": {
