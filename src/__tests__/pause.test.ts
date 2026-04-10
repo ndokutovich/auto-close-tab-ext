@@ -174,6 +174,49 @@ describe('pause integration', () => {
     expect(Date.now() - newLastAccessed).toBeLessThan(500);
   });
 
+  it('setPause(false) atomically clears pausedSince and idleSince (race regression)', async () => {
+    // REGRESSION: setPause(false) is not serialized through idleOpChain, so it
+    // can interleave with the idle handler on await boundaries. The bug version
+    // cleared pausedSince and idleSince in separate sync blocks with awaits
+    // between them:
+    //   sync: pausedSince = null
+    //   await setPausedSince(null)            <-- YIELD
+    //   await flush()                         <-- YIELD
+    //   if (idleSince !== null) idleSince = null; await remove('idleSince')
+    // An idle handler running concurrently could observe pausedSince === null
+    // while idleSince was still stale, and apply an (over-)shift on top of the
+    // pause shift.
+    //
+    // This test verifies the atomic invariant: at the moment the first
+    // storage-write triggered by setPause(false) happens (remove 'pausedSince'),
+    // the in-memory idleSince must ALREADY be null.
+    const now = Date.now();
+    store['idleSince'] = now - 3_600_000;
+    store['pausedSince'] = now - 1_000;
+    store['tabTimes'] = { 1: now - 500 };
+    store['tabStages'] = { 1: 0 };
+
+    const tracker = await import('../background/tab-tracker');
+    const browser = (await import('webextension-polyfill')).default;
+    vi.mocked(browser.tabs.query).mockResolvedValue([
+      { id: 1, active: true, pinned: false, url: 'https://x.com' } as any,
+    ]);
+    await tracker.initTracker();
+
+    let observedIdleSinceAtPausedSinceWrite: number | null | 'not-seen' = 'not-seen';
+    vi.mocked(browser.storage.local.remove).mockImplementation(async (keys: any) => {
+      const list = typeof keys === 'string' ? [keys] : keys;
+      if (list.includes('pausedSince')) {
+        observedIdleSinceAtPausedSinceWrite = tracker.getIdleSinceInternal();
+      }
+      for (const k of list) delete store[k];
+    });
+
+    await tracker.setPause(false);
+
+    expect(observedIdleSinceAtPausedSinceWrite).toBeNull();
+  });
+
   it('setPause(false) clears stale idleSince instead of rewriting it to now', async () => {
     // REGRESSION (Codex P1): on resume, idleSince was rewritten to `now`.
     // The idle handler only updates idleSince when it is null, so the next

@@ -88,6 +88,10 @@ export function getPausedSinceInternal(): number | null {
   return pausedSince;
 }
 
+export function getIdleSinceInternal(): number | null {
+  return idleSince;
+}
+
 /**
  * Toggle the global pause state. On unpause, shifts all tabTimes forward
  * by the pause duration (capped at `now` for tabs activated during pause).
@@ -102,20 +106,31 @@ export async function setPause(paused: boolean): Promise<void> {
     if (pausedSince === null) return; // already running
     const now = Date.now();
     const shiftMs = Math.max(0, now - pausedSince);
+    // Atomic sync block: update ALL in-memory state before any await. The idle
+    // handler is serialized on idleOpChain, but setPause is not — so on await
+    // boundaries a concurrent handler could observe the intermediate state
+    // (pausedSince === null but idleSince still stale) and apply a bogus
+    // over-shift on top of the pause shift. Clearing both synchronously
+    // guarantees handlers see either "paused" (early return) or "running with
+    // no pending idle" (no-op).
+    //
+    // Rationale for clearing idleSince (vs rewriting to `now`): clicking the
+    // unpause button requires mouse movement, so the OS is guaranteed active
+    // at this moment. A stale idleSince (from a pre-pause idle period that
+    // was never cleared because the idle handler early-returned while paused)
+    // would otherwise break the next idle→active compensation — the handler
+    // only updates idleSince when it is null, so the next real idle cycle
+    // would shift tabs by the entire post-resume work interval.
     shiftTabTimes(tabTimes, shiftMs, now);
     dirty = true;
+    const hadStaleIdle = idleSince !== null;
     pausedSince = null;
+    idleSince = null;
+    // Now persist. Order doesn't matter for correctness — in-memory state is
+    // already consistent.
     await setPausedSince(null);
     await flush();
-    // Clear any stale idleSince. Rationale: clicking the unpause button
-    // requires mouse movement, so at this moment the OS is guaranteed to be
-    // active. A stale idleSince (from a pre-pause idle period that was never
-    // cleared because the idle handler early-returns while paused) would
-    // otherwise survive and break the next idle→active compensation: the
-    // idle handler only updates idleSince when it is null, so on the next
-    // real idle cycle the shift would cover all post-resume work time.
-    if (idleSince !== null) {
-      idleSince = null;
+    if (hadStaleIdle) {
       await browser.storage.local.remove('idleSince');
     }
   }
