@@ -5,6 +5,7 @@
   "description": "__MSG_extDescription__",
   "default_locale": "en",
   "permissions": ["tabs", "alarms", "storage", "scripting", "notifications", "idle", "contextMenus"],
+  "optional_permissions": ["history"],
   "host_permissions": ["<all_urls>"],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'none'"

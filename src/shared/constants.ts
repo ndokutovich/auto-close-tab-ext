@@ -8,6 +8,8 @@ export const DEFAULT_SETTINGS: Settings = {
   protectGroupedTabs: true,
   expireAction: 'close',
   graveyardMaxSize: 200,
+  graveyardRetentionDays: 0,
+  historySyncEnabled: false,
   minTabCount: 3,
   whitelistedDomains: [],
 };

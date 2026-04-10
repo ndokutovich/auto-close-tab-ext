@@ -156,6 +156,20 @@ export function capGraveyard<T>(entries: T[], maxSize: number): T[] {
 }
 
 /**
+ * Remove graveyard entries older than `maxAgeDays` days.
+ * Returns a new array (does not mutate). `maxAgeDays <= 0` disables expiry.
+ */
+export function expireGraveyardEntries(
+  entries: GraveyardEntry[],
+  maxAgeDays: number,
+  now: number
+): GraveyardEntry[] {
+  if (maxAgeDays <= 0) return entries;
+  const cutoff = now - maxAgeDays * 86_400_000;
+  return entries.filter(e => e.closedAt >= cutoff);
+}
+
+/**
  * Shift tab last-accessed timestamps forward by a pause/idle duration.
  * Tabs activated DURING the pause (lastAccessed > pausedSince) would end up
  * with `old + shift > now` — we clamp to `now` so their elapsed stays >= 0

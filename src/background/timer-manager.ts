@@ -14,7 +14,7 @@ import {
   isPaused,
 } from './tab-tracker';
 import { buildImmunityContext, isImmune } from './immunity';
-import { buryTab, restoreTab, removeEntry } from './graveyard';
+import { buryTab, restoreTab, removeEntry, pruneExpiredEntries } from './graveyard';
 
 export async function startTimer(): Promise<void> {
   // Alarms persist across SW restarts in MV3. Don't recreate if already scheduled —
@@ -118,6 +118,9 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
   }
 
   await flush();
+
+  // Auto-expiry: prune graveyard entries older than the retention limit
+  await pruneExpiredEntries(settings.graveyardRetentionDays);
 }
 
 function sendAgingUpdate(tabId: number, stage: AgingStage, timeRemainingMs: number): void {

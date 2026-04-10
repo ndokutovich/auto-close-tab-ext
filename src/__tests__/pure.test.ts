@@ -8,6 +8,7 @@ import {
   isTabImmune,
   stripAgingPrefix,
   capGraveyard,
+  expireGraveyardEntries,
   shiftTabTimes,
   type TabProps,
 } from '../shared/pure';
@@ -274,6 +275,55 @@ describe('capGraveyard', () => {
   it('truncates to maxSize, keeping newest (first)', () => {
     const entries = [1, 2, 3, 4, 5];
     expect(capGraveyard(entries, 3)).toEqual([1, 2, 3]);
+  });
+});
+
+// --- expireGraveyardEntries ---
+
+describe('expireGraveyardEntries', () => {
+  const entry = (closedAt: number) => ({
+    id: `id-${closedAt}`, url: 'https://x.com', title: 'X',
+    faviconUrl: '', closedAt, domain: 'x.com',
+  });
+
+  const DAY = 86_400_000;
+
+  it('returns all entries when maxAgeDays is 0 (disabled)', () => {
+    const entries = [entry(100), entry(200)];
+    expect(expireGraveyardEntries(entries, 0, 1000)).toBe(entries); // same ref
+  });
+
+  it('returns all entries when maxAgeDays is negative', () => {
+    const entries = [entry(100)];
+    expect(expireGraveyardEntries(entries, -1, 1000)).toBe(entries);
+  });
+
+  it('removes entries older than maxAgeDays', () => {
+    const now = DAY * 10;
+    const entries = [
+      entry(now - DAY * 2),  // 2 days old → keep (within 7 days)
+      entry(now - DAY * 8),  // 8 days old → remove
+      entry(now - DAY * 30), // 30 days old → remove
+    ];
+    const result = expireGraveyardEntries(entries, 7, now);
+    expect(result).toEqual([entries[0]]);
+  });
+
+  it('keeps entries exactly at the cutoff boundary', () => {
+    const now = DAY * 10;
+    const entries = [entry(now - DAY * 7)]; // exactly 7 days old
+    const result = expireGraveyardEntries(entries, 7, now);
+    expect(result).toEqual([entries[0]]); // closedAt === cutoff → >= passes
+  });
+
+  it('returns empty array when all entries are expired', () => {
+    const now = DAY * 100;
+    const entries = [entry(DAY), entry(DAY * 2)];
+    expect(expireGraveyardEntries(entries, 1, now)).toEqual([]);
+  });
+
+  it('handles empty array', () => {
+    expect(expireGraveyardEntries([], 7, Date.now())).toEqual([]);
   });
 });
 

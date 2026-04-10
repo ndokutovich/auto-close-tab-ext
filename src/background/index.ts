@@ -4,6 +4,7 @@ import { startTimer, onAlarmFired, setupNotificationListener } from './timer-man
 import { setupMessageListener } from './messaging';
 import { setupContextMenuListeners, createContextMenuItems, toggleLockForTab } from './context-menu';
 import { syncBadge } from './graveyard';
+import { setupHistorySyncListener } from './history-sync';
 import { isRestrictedUrl } from '../shared/pure';
 
 // Register all listeners synchronously at module load. MV3 requires this so
@@ -12,6 +13,7 @@ setupTabListeners();
 setupMessageListener();
 setupNotificationListener();
 setupContextMenuListeners();
+setupHistorySyncListener();
 setupKeyboardShortcuts();
 browser.alarms.onAlarm.addListener(onAlarmFired);
 
@@ -31,6 +33,9 @@ async function init(freshInstall: boolean): Promise<void> {
     await syncBadge();
     if (freshInstall) {
       createContextMenuItems();
+      browser.tabs.create({
+        url: browser.runtime.getURL('options/options.html?welcome=1'),
+      }).catch(() => {});
     }
   } catch (err) {
     console.error('[Aging Tabs] Init error:', err);

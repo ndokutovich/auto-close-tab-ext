@@ -25,6 +25,8 @@ export async function saveSettings(partial: Partial<Settings>): Promise<Settings
     timeoutMinutes: Math.max(1, Math.min(1440, Number(merged.timeoutMinutes) || current.timeoutMinutes)),
     minTabCount: Math.max(0, Math.min(100, Number(merged.minTabCount) ?? current.minTabCount)),
     graveyardMaxSize: Math.max(0, Math.min(10000, Number(merged.graveyardMaxSize) ?? current.graveyardMaxSize)),
+    graveyardRetentionDays: Math.max(0, Math.min(365, Number(merged.graveyardRetentionDays) || 0)),
+    historySyncEnabled: !!merged.historySyncEnabled,
     faviconDimming: !!merged.faviconDimming,
     titlePrefix: !!merged.titlePrefix,
     closeEmptyTabs: !!merged.closeEmptyTabs,
@@ -94,6 +96,10 @@ export async function removeFromGraveyard(id: string): Promise<GraveyardEntry[]>
   graveyard = graveyard.filter(e => e.id !== id);
   await browser.storage.local.set({ [STORAGE_KEYS.GRAVEYARD]: graveyard });
   return graveyard;
+}
+
+export async function setGraveyard(entries: GraveyardEntry[]): Promise<void> {
+  await browser.storage.local.set({ [STORAGE_KEYS.GRAVEYARD]: entries });
 }
 
 export async function clearGraveyard(): Promise<void> {

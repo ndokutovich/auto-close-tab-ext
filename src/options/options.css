@@ -370,3 +370,27 @@ textarea:focus {
   background: var(--scrollbar);
   border-radius: 3px;
 }
+
+/* Welcome banner */
+.welcome-banner {
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.welcome-banner[hidden] {
+  display: none;
+}
+
+.welcome-banner p + p {
+  margin-top: 8px;
+}
+
+.welcome-banner button {
+  margin-top: 12px;
+}

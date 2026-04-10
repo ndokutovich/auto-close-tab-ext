@@ -20,6 +20,11 @@ const graveyardListEl = document.getElementById('graveyard-list')!;
 const btnExport = document.getElementById('btn-export')!;
 const btnImport = document.getElementById('btn-import') as HTMLInputElement;
 const btnClear = document.getElementById('btn-clear')!;
+const graveyardRetentionSelect = document.getElementById('graveyardRetention') as HTMLSelectElement;
+const historySyncToggle = document.getElementById('historySyncEnabled') as HTMLInputElement;
+const historySyncField = document.getElementById('history-sync-field')!;
+const welcomeBanner = document.getElementById('welcome-banner')!;
+const btnWelcomeDismiss = document.getElementById('btn-welcome-dismiss')!;
 const btnSave = document.getElementById('btn-save')!;
 const saveStatusEl = document.getElementById('save-status')!;
 
@@ -35,6 +40,8 @@ async function loadSettings(): Promise<void> {
   titleToggle.checked = settings.titlePrefix;
   whitelistArea.value = settings.whitelistedDomains.join('\n');
   graveyardSizeInput.value = String(settings.graveyardMaxSize);
+  graveyardRetentionSelect.value = String(settings.graveyardRetentionDays);
+  historySyncToggle.checked = settings.historySyncEnabled;
 }
 
 async function saveSettings(): Promise<void> {
@@ -54,6 +61,8 @@ async function saveSettings(): Promise<void> {
     titlePrefix: titleToggle.checked,
     whitelistedDomains: domains,
     graveyardMaxSize: Number(graveyardSizeInput.value) ?? 200,
+    graveyardRetentionDays: Number(graveyardRetentionSelect.value) || 0,
+    historySyncEnabled: historySyncToggle.checked,
   };
 
   await browser.runtime.sendMessage({ type: 'SAVE_SETTINGS', settings });
@@ -159,6 +168,43 @@ btnImport.addEventListener('change', () => {
     importDataFromFile(file);
     btnImport.value = '';
   }
+});
+
+// --- History sync permission flow ---
+
+// Hide history sync toggle on browsers without history API (Safari)
+try {
+  if (!browser.history?.onVisitRemoved) {
+    historySyncField.hidden = true;
+  }
+} catch {
+  historySyncField.hidden = true;
+}
+
+historySyncToggle.addEventListener('change', async () => {
+  if (historySyncToggle.checked) {
+    try {
+      const granted = await browser.permissions.request({ permissions: ['history'] });
+      if (!granted) {
+        historySyncToggle.checked = false;
+        return;
+      }
+    } catch {
+      historySyncToggle.checked = false;
+      return;
+    }
+  }
+  saveSettings();
+});
+
+// --- Welcome banner ---
+
+if (new URLSearchParams(window.location.search).has('welcome')) {
+  welcomeBanner.removeAttribute('hidden');
+}
+
+btnWelcomeDismiss.addEventListener('click', () => {
+  welcomeBanner.setAttribute('hidden', '');
 });
 
 loadSettings();

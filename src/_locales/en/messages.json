@@ -64,5 +64,20 @@
   "timeJustNow": { "message": "just now" },
   "timeMinutesAgo": { "message": "$n$m ago", "placeholders": { "n": { "content": "$1" } } },
   "timeHoursAgo": { "message": "$n$h ago", "placeholders": { "n": { "content": "$1" } } },
-  "timeDaysAgo": { "message": "$n$d ago", "placeholders": { "n": { "content": "$1" } } }
+  "timeDaysAgo": { "message": "$n$d ago", "placeholders": { "n": { "content": "$1" } } },
+
+  "sectionPrivacy": { "message": "Privacy" },
+  "labelRetention": { "message": "Auto-delete entries older than" },
+  "retentionOff": { "message": "Off (keep forever)" },
+  "retention1Day": { "message": "1 day" },
+  "retention7Days": { "message": "7 days" },
+  "retention30Days": { "message": "30 days" },
+  "retention90Days": { "message": "90 days" },
+  "hintRetention": { "message": "Older graveyard entries are permanently deleted" },
+  "labelHistorySync": { "message": "Sync with history cleanup" },
+  "hintHistorySync": { "message": "When you clear browser history, matching graveyard entries are removed too" },
+
+  "welcomeTitle": { "message": "Welcome to Aging Tabs!" },
+  "welcomeMessage": { "message": "The graveyard stores URLs of closed tabs locally. If you clear browser history, graveyard entries will remain unless you enable privacy controls below." },
+  "welcomeDismiss": { "message": "Got it" }
 }

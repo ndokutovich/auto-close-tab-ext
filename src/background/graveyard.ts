@@ -1,7 +1,7 @@
 import browser from 'webextension-polyfill';
 import type { GraveyardEntry } from '../shared/types';
-import { addToGraveyard, getGraveyard, removeFromGraveyard, clearGraveyard as storageClearGraveyard } from '../shared/storage';
-import { stripAgingPrefix, extractDomain } from '../shared/pure';
+import { addToGraveyard, getGraveyard, setGraveyard, removeFromGraveyard, clearGraveyard as storageClearGraveyard } from '../shared/storage';
+import { stripAgingPrefix, extractDomain, expireGraveyardEntries } from '../shared/pure';
 import { BLINK_CLOSING_TEXT } from '../shared/constants';
 import { isPaused } from './tab-tracker';
 
@@ -52,6 +52,26 @@ export async function removeEntry(id: string): Promise<void> {
 export async function clearAll(): Promise<void> {
   await storageClearGraveyard();
   await updateBadge(0);
+}
+
+export async function removeEntriesByUrls(urls: string[]): Promise<void> {
+  const urlSet = new Set(urls);
+  const graveyard = await getGraveyard();
+  const filtered = graveyard.filter(e => !urlSet.has(e.url));
+  if (filtered.length < graveyard.length) {
+    await setGraveyard(filtered);
+    await syncBadge();
+  }
+}
+
+export async function pruneExpiredEntries(maxAgeDays: number): Promise<void> {
+  if (maxAgeDays <= 0) return;
+  const graveyard = await getGraveyard();
+  const pruned = expireGraveyardEntries(graveyard, maxAgeDays, Date.now());
+  if (pruned.length < graveyard.length) {
+    await setGraveyard(pruned);
+    await syncBadge();
+  }
 }
 
 export async function syncBadge(): Promise<void> {

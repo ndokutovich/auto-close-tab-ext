@@ -98,6 +98,32 @@
       </div>
     </section>
 
+    <section class="section" id="privacy-section">
+      <h2 data-i18n="sectionPrivacy">Privacy</h2>
+      <div class="field">
+        <label for="graveyardRetention" data-i18n="labelRetention">Auto-delete entries older than</label>
+        <select id="graveyardRetention" class="select-field">
+          <option value="0" data-i18n="retentionOff">Off (keep forever)</option>
+          <option value="1" data-i18n="retention1Day">1 day</option>
+          <option value="7" data-i18n="retention7Days">7 days</option>
+          <option value="30" data-i18n="retention30Days">30 days</option>
+          <option value="90" data-i18n="retention90Days">90 days</option>
+        </select>
+        <p class="hint" data-i18n="hintRetention">Older graveyard entries are permanently deleted</p>
+      </div>
+      <div class="field toggle" id="history-sync-field">
+        <label for="historySyncEnabled" data-i18n="labelHistorySync">Sync with history cleanup</label>
+        <p class="hint" data-i18n="hintHistorySync">When you clear browser history, matching graveyard entries are removed too</p>
+        <input type="checkbox" id="historySyncEnabled">
+      </div>
+    </section>
+
+    <div id="welcome-banner" class="welcome-banner" hidden>
+      <p><strong data-i18n="welcomeTitle">Welcome to Aging Tabs!</strong></p>
+      <p data-i18n="welcomeMessage">The graveyard stores URLs of closed tabs locally. If you clear browser history, graveyard entries will remain unless you enable privacy controls below.</p>
+      <button id="btn-welcome-dismiss" class="btn-secondary" data-i18n="welcomeDismiss">Got it</button>
+    </div>
+
     <div class="save-bar">
       <span id="save-status" class="save-status"></span>
       <button id="btn-save" class="btn-primary" data-i18n="btnSave">Save settings</button>

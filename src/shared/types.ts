@@ -11,6 +11,8 @@ export interface Settings {
   protectGroupedTabs: boolean;
   expireAction: 'close' | 'discard';
   graveyardMaxSize: number;
+  graveyardRetentionDays: number;
+  historySyncEnabled: boolean;
   minTabCount: number;
   whitelistedDomains: string[];
 }
