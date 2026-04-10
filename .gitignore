@@ -7,3 +7,18 @@ coverage/
 *.log
 .DS_Store
 Thumbs.db
+
+# Xcode / Safari
+xcuserdata/
+*.xcuserstate
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xccheckout
+*.moved-aside
+DerivedData/
+build/
+*.ipa
+*.dSYM
+*.dSYM.zip

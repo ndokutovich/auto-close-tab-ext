@@ -1,0 +1,1017 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		5E3D85F02F89A0E400D2DD17 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E3D85EF2F89A0E400D2DD17 /* AppDelegate.swift */; };
+		5E3D85F22F89A0E400D2DD17 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E3D85F12F89A0E400D2DD17 /* SceneDelegate.swift */; };
+		5E3D85F52F89A0E400D2DD17 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D85F32F89A0E400D2DD17 /* LaunchScreen.storyboard */; };
+		5E3D85F82F89A0E400D2DD17 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D85F62F89A0E400D2DD17 /* Main.storyboard */; };
+		5E3D86012F89A0E400D2DD17 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E3D86002F89A0E400D2DD17 /* AppDelegate.swift */; };
+		5E3D86042F89A0E400D2DD17 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D86022F89A0E400D2DD17 /* Main.storyboard */; };
+		5E3D860B2F89A0E400D2DD17 /* Aging tabs Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 5E3D860A2F89A0E400D2DD17 /* Aging tabs Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		5E3D86152F89A0E400D2DD17 /* Aging tabs Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 5E3D86142F89A0E400D2DD17 /* Aging tabs Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		5E3D861A2F89A0E400D2DD17 /* Main.html in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D85DF2F89A0E100D2DD17 /* Main.html */; };
+		5E3D861B2F89A0E400D2DD17 /* Main.html in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D85DF2F89A0E100D2DD17 /* Main.html */; };
+		5E3D861C2F89A0E400D2DD17 /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D85E12F89A0E100D2DD17 /* Icon.png */; };
+		5E3D861D2F89A0E400D2DD17 /* Icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D85E12F89A0E100D2DD17 /* Icon.png */; };
+		5E3D861E2F89A0E400D2DD17 /* Style.css in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D85E22F89A0E100D2DD17 /* Style.css */; };
+		5E3D861F2F89A0E400D2DD17 /* Style.css in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D85E22F89A0E100D2DD17 /* Style.css */; };
+		5E3D86202F89A0E400D2DD17 /* Script.js in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D85E32F89A0E100D2DD17 /* Script.js */; };
+		5E3D86212F89A0E400D2DD17 /* Script.js in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D85E32F89A0E100D2DD17 /* Script.js */; };
+		5E3D86222F89A0E400D2DD17 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E3D85E42F89A0E100D2DD17 /* ViewController.swift */; };
+		5E3D86232F89A0E400D2DD17 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E3D85E42F89A0E100D2DD17 /* ViewController.swift */; };
+		5E3D86242F89A0E400D2DD17 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D85E52F89A0E400D2DD17 /* Assets.xcassets */; };
+		5E3D86252F89A0E400D2DD17 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D85E52F89A0E400D2DD17 /* Assets.xcassets */; };
+		5E3D86262F89A0E400D2DD17 /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E3D85E72F89A0E400D2DD17 /* SafariWebExtensionHandler.swift */; };
+		5E3D86272F89A0E400D2DD17 /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E3D85E72F89A0E400D2DD17 /* SafariWebExtensionHandler.swift */; };
+		5E3D86412F89A0E600D2DD17 /* options in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D86392F89A0E600D2DD17 /* options */; };
+		5E3D86422F89A0E600D2DD17 /* popup in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D863A2F89A0E600D2DD17 /* popup */; };
+		5E3D86432F89A0E600D2DD17 /* browser-polyfill.js in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D863B2F89A0E600D2DD17 /* browser-polyfill.js */; };
+		5E3D86442F89A0E600D2DD17 /* background.js in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D863C2F89A0E600D2DD17 /* background.js */; };
+		5E3D86452F89A0E600D2DD17 /* icons in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D863D2F89A0E600D2DD17 /* icons */; };
+		5E3D86462F89A0E600D2DD17 /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D863E2F89A0E600D2DD17 /* manifest.json */; };
+		5E3D86472F89A0E600D2DD17 /* _locales in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D863F2F89A0E600D2DD17 /* _locales */; };
+		5E3D86482F89A0E600D2DD17 /* content.js in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D86402F89A0E600D2DD17 /* content.js */; };
+		5E3D86492F89A0E600D2DD17 /* options in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D86392F89A0E600D2DD17 /* options */; };
+		5E3D864A2F89A0E600D2DD17 /* popup in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D863A2F89A0E600D2DD17 /* popup */; };
+		5E3D864B2F89A0E600D2DD17 /* browser-polyfill.js in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D863B2F89A0E600D2DD17 /* browser-polyfill.js */; };
+		5E3D864C2F89A0E600D2DD17 /* background.js in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D863C2F89A0E600D2DD17 /* background.js */; };
+		5E3D864D2F89A0E600D2DD17 /* icons in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D863D2F89A0E600D2DD17 /* icons */; };
+		5E3D864E2F89A0E600D2DD17 /* manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D863E2F89A0E600D2DD17 /* manifest.json */; };
+		5E3D864F2F89A0E600D2DD17 /* _locales in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D863F2F89A0E600D2DD17 /* _locales */; };
+		5E3D86502F89A0E600D2DD17 /* content.js in Resources */ = {isa = PBXBuildFile; fileRef = 5E3D86402F89A0E600D2DD17 /* content.js */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		5E3D860C2F89A0E400D2DD17 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 5E3D85D92F89A0E100D2DD17 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5E3D86092F89A0E400D2DD17;
+			remoteInfo = "Aging tabs Extension (iOS)";
+		};
+		5E3D86162F89A0E400D2DD17 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 5E3D85D92F89A0E100D2DD17 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5E3D86132F89A0E400D2DD17;
+			remoteInfo = "Aging tabs Extension (macOS)";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		5E3D862D2F89A0E400D2DD17 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				5E3D860B2F89A0E400D2DD17 /* Aging tabs Extension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E3D86342F89A0E400D2DD17 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				5E3D86152F89A0E400D2DD17 /* Aging tabs Extension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		5E3D85E02F89A0E100D2DD17 /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = Base; path = Base.lproj/Main.html; sourceTree = "<group>"; };
+		5E3D85E12F89A0E100D2DD17 /* Icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Icon.png; sourceTree = "<group>"; };
+		5E3D85E22F89A0E100D2DD17 /* Style.css */ = {isa = PBXFileReference; lastKnownFileType = text.css; path = Style.css; sourceTree = "<group>"; };
+		5E3D85E32F89A0E100D2DD17 /* Script.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = Script.js; sourceTree = "<group>"; };
+		5E3D85E42F89A0E100D2DD17 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
+		5E3D85E52F89A0E400D2DD17 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		5E3D85E72F89A0E400D2DD17 /* SafariWebExtensionHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafariWebExtensionHandler.swift; sourceTree = "<group>"; };
+		5E3D85EC2F89A0E400D2DD17 /* Aging tabs.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Aging tabs.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		5E3D85EF2F89A0E400D2DD17 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		5E3D85F12F89A0E400D2DD17 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		5E3D85F42F89A0E400D2DD17 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		5E3D85F72F89A0E400D2DD17 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		5E3D85F92F89A0E400D2DD17 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		5E3D85FE2F89A0E400D2DD17 /* Aging tabs.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Aging tabs.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		5E3D86002F89A0E400D2DD17 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		5E3D86032F89A0E400D2DD17 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		5E3D86052F89A0E400D2DD17 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		5E3D860A2F89A0E400D2DD17 /* Aging tabs Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Aging tabs Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		5E3D860F2F89A0E400D2DD17 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		5E3D86142F89A0E400D2DD17 /* Aging tabs Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Aging tabs Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		5E3D86192F89A0E400D2DD17 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		5E3D86392F89A0E600D2DD17 /* options */ = {isa = PBXFileReference; lastKnownFileType = folder; name = options; path = ../../../dist/safari/options; sourceTree = "<group>"; };
+		5E3D863A2F89A0E600D2DD17 /* popup */ = {isa = PBXFileReference; lastKnownFileType = folder; name = popup; path = ../../../dist/safari/popup; sourceTree = "<group>"; };
+		5E3D863B2F89A0E600D2DD17 /* browser-polyfill.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = "browser-polyfill.js"; path = "../../../dist/safari/browser-polyfill.js"; sourceTree = "<group>"; };
+		5E3D863C2F89A0E600D2DD17 /* background.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = background.js; path = ../../../dist/safari/background.js; sourceTree = "<group>"; };
+		5E3D863D2F89A0E600D2DD17 /* icons */ = {isa = PBXFileReference; lastKnownFileType = folder; name = icons; path = ../../../dist/safari/icons; sourceTree = "<group>"; };
+		5E3D863E2F89A0E600D2DD17 /* manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = manifest.json; path = ../../../dist/safari/manifest.json; sourceTree = "<group>"; };
+		5E3D863F2F89A0E600D2DD17 /* _locales */ = {isa = PBXFileReference; lastKnownFileType = folder; name = _locales; path = ../../../dist/safari/_locales; sourceTree = "<group>"; };
+		5E3D86402F89A0E600D2DD17 /* content.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = content.js; path = ../../../dist/safari/content.js; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		5E3D85E92F89A0E400D2DD17 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E3D85FB2F89A0E400D2DD17 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E3D86072F89A0E400D2DD17 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E3D86112F89A0E400D2DD17 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		5E3D85D82F89A0E100D2DD17 = {
+			isa = PBXGroup;
+			children = (
+				5E3D85DD2F89A0E100D2DD17 /* Shared (App) */,
+				5E3D85E62F89A0E400D2DD17 /* Shared (Extension) */,
+				5E3D85EE2F89A0E400D2DD17 /* iOS (App) */,
+				5E3D85FF2F89A0E400D2DD17 /* macOS (App) */,
+				5E3D860E2F89A0E400D2DD17 /* iOS (Extension) */,
+				5E3D86182F89A0E400D2DD17 /* macOS (Extension) */,
+				5E3D85ED2F89A0E400D2DD17 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		5E3D85DD2F89A0E100D2DD17 /* Shared (App) */ = {
+			isa = PBXGroup;
+			children = (
+				5E3D85E42F89A0E100D2DD17 /* ViewController.swift */,
+				5E3D85E52F89A0E400D2DD17 /* Assets.xcassets */,
+				5E3D85DE2F89A0E100D2DD17 /* Resources */,
+			);
+			path = "Shared (App)";
+			sourceTree = "<group>";
+		};
+		5E3D85DE2F89A0E100D2DD17 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				5E3D85DF2F89A0E100D2DD17 /* Main.html */,
+				5E3D85E12F89A0E100D2DD17 /* Icon.png */,
+				5E3D85E22F89A0E100D2DD17 /* Style.css */,
+				5E3D85E32F89A0E100D2DD17 /* Script.js */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		5E3D85E62F89A0E400D2DD17 /* Shared (Extension) */ = {
+			isa = PBXGroup;
+			children = (
+				5E3D86382F89A0E600D2DD17 /* Resources */,
+				5E3D85E72F89A0E400D2DD17 /* SafariWebExtensionHandler.swift */,
+			);
+			path = "Shared (Extension)";
+			sourceTree = "<group>";
+		};
+		5E3D85ED2F89A0E400D2DD17 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				5E3D85EC2F89A0E400D2DD17 /* Aging tabs.app */,
+				5E3D85FE2F89A0E400D2DD17 /* Aging tabs.app */,
+				5E3D860A2F89A0E400D2DD17 /* Aging tabs Extension.appex */,
+				5E3D86142F89A0E400D2DD17 /* Aging tabs Extension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		5E3D85EE2F89A0E400D2DD17 /* iOS (App) */ = {
+			isa = PBXGroup;
+			children = (
+				5E3D85EF2F89A0E400D2DD17 /* AppDelegate.swift */,
+				5E3D85F12F89A0E400D2DD17 /* SceneDelegate.swift */,
+				5E3D85F32F89A0E400D2DD17 /* LaunchScreen.storyboard */,
+				5E3D85F62F89A0E400D2DD17 /* Main.storyboard */,
+				5E3D85F92F89A0E400D2DD17 /* Info.plist */,
+			);
+			path = "iOS (App)";
+			sourceTree = "<group>";
+		};
+		5E3D85FF2F89A0E400D2DD17 /* macOS (App) */ = {
+			isa = PBXGroup;
+			children = (
+				5E3D86002F89A0E400D2DD17 /* AppDelegate.swift */,
+				5E3D86022F89A0E400D2DD17 /* Main.storyboard */,
+				5E3D86052F89A0E400D2DD17 /* Info.plist */,
+			);
+			path = "macOS (App)";
+			sourceTree = "<group>";
+		};
+		5E3D860E2F89A0E400D2DD17 /* iOS (Extension) */ = {
+			isa = PBXGroup;
+			children = (
+				5E3D860F2F89A0E400D2DD17 /* Info.plist */,
+			);
+			path = "iOS (Extension)";
+			sourceTree = "<group>";
+		};
+		5E3D86182F89A0E400D2DD17 /* macOS (Extension) */ = {
+			isa = PBXGroup;
+			children = (
+				5E3D86192F89A0E400D2DD17 /* Info.plist */,
+			);
+			path = "macOS (Extension)";
+			sourceTree = "<group>";
+		};
+		5E3D86382F89A0E600D2DD17 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				5E3D86392F89A0E600D2DD17 /* options */,
+				5E3D863A2F89A0E600D2DD17 /* popup */,
+				5E3D863B2F89A0E600D2DD17 /* browser-polyfill.js */,
+				5E3D863C2F89A0E600D2DD17 /* background.js */,
+				5E3D863D2F89A0E600D2DD17 /* icons */,
+				5E3D863E2F89A0E600D2DD17 /* manifest.json */,
+				5E3D863F2F89A0E600D2DD17 /* _locales */,
+				5E3D86402F89A0E600D2DD17 /* content.js */,
+			);
+			name = Resources;
+			path = "Shared (Extension)";
+			sourceTree = SOURCE_ROOT;
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		5E3D85EB2F89A0E400D2DD17 /* Aging tabs (iOS) */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5E3D862E2F89A0E400D2DD17 /* Build configuration list for PBXNativeTarget "Aging tabs (iOS)" */;
+			buildPhases = (
+				5E3D85E82F89A0E400D2DD17 /* Sources */,
+				5E3D85E92F89A0E400D2DD17 /* Frameworks */,
+				5E3D85EA2F89A0E400D2DD17 /* Resources */,
+				5E3D862D2F89A0E400D2DD17 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5E3D860D2F89A0E400D2DD17 /* PBXTargetDependency */,
+			);
+			name = "Aging tabs (iOS)";
+			packageProductDependencies = (
+			);
+			productName = "Aging tabs (iOS)";
+			productReference = 5E3D85EC2F89A0E400D2DD17 /* Aging tabs.app */;
+			productType = "com.apple.product-type.application";
+		};
+		5E3D85FD2F89A0E400D2DD17 /* Aging tabs (macOS) */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5E3D86352F89A0E400D2DD17 /* Build configuration list for PBXNativeTarget "Aging tabs (macOS)" */;
+			buildPhases = (
+				5E3D85FA2F89A0E400D2DD17 /* Sources */,
+				5E3D85FB2F89A0E400D2DD17 /* Frameworks */,
+				5E3D85FC2F89A0E400D2DD17 /* Resources */,
+				5E3D86342F89A0E400D2DD17 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5E3D86172F89A0E400D2DD17 /* PBXTargetDependency */,
+			);
+			name = "Aging tabs (macOS)";
+			packageProductDependencies = (
+			);
+			productName = "Aging tabs (macOS)";
+			productReference = 5E3D85FE2F89A0E400D2DD17 /* Aging tabs.app */;
+			productType = "com.apple.product-type.application";
+		};
+		5E3D86092F89A0E400D2DD17 /* Aging tabs Extension (iOS) */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5E3D862A2F89A0E400D2DD17 /* Build configuration list for PBXNativeTarget "Aging tabs Extension (iOS)" */;
+			buildPhases = (
+				5E3D86062F89A0E400D2DD17 /* Sources */,
+				5E3D86072F89A0E400D2DD17 /* Frameworks */,
+				5E3D86082F89A0E400D2DD17 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "Aging tabs Extension (iOS)";
+			packageProductDependencies = (
+			);
+			productName = "Aging tabs Extension (iOS)";
+			productReference = 5E3D860A2F89A0E400D2DD17 /* Aging tabs Extension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		5E3D86132F89A0E400D2DD17 /* Aging tabs Extension (macOS) */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5E3D86312F89A0E400D2DD17 /* Build configuration list for PBXNativeTarget "Aging tabs Extension (macOS)" */;
+			buildPhases = (
+				5E3D86102F89A0E400D2DD17 /* Sources */,
+				5E3D86112F89A0E400D2DD17 /* Frameworks */,
+				5E3D86122F89A0E400D2DD17 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "Aging tabs Extension (macOS)";
+			packageProductDependencies = (
+			);
+			productName = "Aging tabs Extension (macOS)";
+			productReference = 5E3D86142F89A0E400D2DD17 /* Aging tabs Extension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		5E3D85D92F89A0E100D2DD17 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2630;
+				LastUpgradeCheck = 2630;
+				TargetAttributes = {
+					5E3D85EB2F89A0E400D2DD17 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+					5E3D85FD2F89A0E400D2DD17 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+					5E3D86092F89A0E400D2DD17 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+					5E3D86132F89A0E400D2DD17 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+				};
+			};
+			buildConfigurationList = 5E3D85DC2F89A0E100D2DD17 /* Build configuration list for PBXProject "Aging tabs" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 5E3D85D82F89A0E100D2DD17;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 5E3D85ED2F89A0E400D2DD17 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				5E3D85EB2F89A0E400D2DD17 /* Aging tabs (iOS) */,
+				5E3D85FD2F89A0E400D2DD17 /* Aging tabs (macOS) */,
+				5E3D86092F89A0E400D2DD17 /* Aging tabs Extension (iOS) */,
+				5E3D86132F89A0E400D2DD17 /* Aging tabs Extension (macOS) */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		5E3D85EA2F89A0E400D2DD17 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5E3D861C2F89A0E400D2DD17 /* Icon.png in Resources */,
+				5E3D85F52F89A0E400D2DD17 /* LaunchScreen.storyboard in Resources */,
+				5E3D861A2F89A0E400D2DD17 /* Main.html in Resources */,
+				5E3D86202F89A0E400D2DD17 /* Script.js in Resources */,
+				5E3D86242F89A0E400D2DD17 /* Assets.xcassets in Resources */,
+				5E3D85F82F89A0E400D2DD17 /* Main.storyboard in Resources */,
+				5E3D861E2F89A0E400D2DD17 /* Style.css in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E3D85FC2F89A0E400D2DD17 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5E3D861D2F89A0E400D2DD17 /* Icon.png in Resources */,
+				5E3D861F2F89A0E400D2DD17 /* Style.css in Resources */,
+				5E3D86042F89A0E400D2DD17 /* Main.storyboard in Resources */,
+				5E3D86212F89A0E400D2DD17 /* Script.js in Resources */,
+				5E3D86252F89A0E400D2DD17 /* Assets.xcassets in Resources */,
+				5E3D861B2F89A0E400D2DD17 /* Main.html in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E3D86082F89A0E400D2DD17 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5E3D86502F89A0E600D2DD17 /* content.js in Resources */,
+				5E3D864C2F89A0E600D2DD17 /* background.js in Resources */,
+				5E3D86492F89A0E600D2DD17 /* options in Resources */,
+				5E3D864B2F89A0E600D2DD17 /* browser-polyfill.js in Resources */,
+				5E3D864D2F89A0E600D2DD17 /* icons in Resources */,
+				5E3D864E2F89A0E600D2DD17 /* manifest.json in Resources */,
+				5E3D864F2F89A0E600D2DD17 /* _locales in Resources */,
+				5E3D864A2F89A0E600D2DD17 /* popup in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E3D86122F89A0E400D2DD17 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5E3D86482F89A0E600D2DD17 /* content.js in Resources */,
+				5E3D86442F89A0E600D2DD17 /* background.js in Resources */,
+				5E3D86412F89A0E600D2DD17 /* options in Resources */,
+				5E3D86432F89A0E600D2DD17 /* browser-polyfill.js in Resources */,
+				5E3D86452F89A0E600D2DD17 /* icons in Resources */,
+				5E3D86462F89A0E600D2DD17 /* manifest.json in Resources */,
+				5E3D86472F89A0E600D2DD17 /* _locales in Resources */,
+				5E3D86422F89A0E600D2DD17 /* popup in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		5E3D85E82F89A0E400D2DD17 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5E3D86222F89A0E400D2DD17 /* ViewController.swift in Sources */,
+				5E3D85F02F89A0E400D2DD17 /* AppDelegate.swift in Sources */,
+				5E3D85F22F89A0E400D2DD17 /* SceneDelegate.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E3D85FA2F89A0E400D2DD17 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5E3D86232F89A0E400D2DD17 /* ViewController.swift in Sources */,
+				5E3D86012F89A0E400D2DD17 /* AppDelegate.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E3D86062F89A0E400D2DD17 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5E3D86262F89A0E400D2DD17 /* SafariWebExtensionHandler.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5E3D86102F89A0E400D2DD17 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5E3D86272F89A0E400D2DD17 /* SafariWebExtensionHandler.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		5E3D860D2F89A0E400D2DD17 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5E3D86092F89A0E400D2DD17 /* Aging tabs Extension (iOS) */;
+			targetProxy = 5E3D860C2F89A0E400D2DD17 /* PBXContainerItemProxy */;
+		};
+		5E3D86172F89A0E400D2DD17 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5E3D86132F89A0E400D2DD17 /* Aging tabs Extension (macOS) */;
+			targetProxy = 5E3D86162F89A0E400D2DD17 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		5E3D85DF2F89A0E100D2DD17 /* Main.html */ = {
+			isa = PBXVariantGroup;
+			children = (
+				5E3D85E02F89A0E100D2DD17 /* Base */,
+			);
+			name = Main.html;
+			sourceTree = "<group>";
+		};
+		5E3D85F32F89A0E400D2DD17 /* LaunchScreen.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				5E3D85F42F89A0E400D2DD17 /* Base */,
+			);
+			name = LaunchScreen.storyboard;
+			sourceTree = "<group>";
+		};
+		5E3D85F62F89A0E400D2DD17 /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				5E3D85F72F89A0E400D2DD17 /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+		5E3D86022F89A0E400D2DD17 /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				5E3D86032F89A0E400D2DD17 /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		5E3D86282F89A0E400D2DD17 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		5E3D86292F89A0E400D2DD17 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		5E3D862B2F89A0E400D2DD17 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BA59RA8CF9;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "iOS (Extension)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Aging tabs Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ndokutovich.aging-tabs.Extension";
+				PRODUCT_NAME = "Aging tabs Extension";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		5E3D862C2F89A0E400D2DD17 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BA59RA8CF9;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "iOS (Extension)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Aging tabs Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ndokutovich.aging-tabs.Extension";
+				PRODUCT_NAME = "Aging tabs Extension";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		5E3D862F2F89A0E400D2DD17 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BA59RA8CF9;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "iOS (App)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Aging tabs";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UIMainStoryboardFile = Main;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ndokutovich.aging-tabs";
+				PRODUCT_NAME = "Aging tabs";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		5E3D86302F89A0E400D2DD17 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BA59RA8CF9;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "iOS (App)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Aging tabs";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UIMainStoryboardFile = Main;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ndokutovich.aging-tabs";
+				PRODUCT_NAME = "Aging tabs";
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		5E3D86322F89A0E400D2DD17 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BA59RA8CF9;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "macOS (Extension)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Aging tabs Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ndokutovich.aging-tabs.Extension";
+				PRODUCT_NAME = "Aging tabs Extension";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		5E3D86332F89A0E400D2DD17 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BA59RA8CF9;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "macOS (Extension)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Aging tabs Extension";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ndokutovich.aging-tabs.Extension";
+				PRODUCT_NAME = "Aging tabs Extension";
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		5E3D86362F89A0E400D2DD17 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BA59RA8CF9;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "macOS (App)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Aging tabs";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSMainStoryboardFile = Main;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ndokutovich.aging-tabs";
+				PRODUCT_NAME = "Aging tabs";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		5E3D86372F89A0E400D2DD17 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = BA59RA8CF9;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_USER_SELECTED_FILES = readonly;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "macOS (App)/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "Aging tabs";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSMainStoryboardFile = Main;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-framework",
+					SafariServices,
+					"-framework",
+					WebKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ndokutovich.aging-tabs";
+				PRODUCT_NAME = "Aging tabs";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		5E3D85DC2F89A0E100D2DD17 /* Build configuration list for PBXProject "Aging tabs" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5E3D86282F89A0E400D2DD17 /* Debug */,
+				5E3D86292F89A0E400D2DD17 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5E3D862A2F89A0E400D2DD17 /* Build configuration list for PBXNativeTarget "Aging tabs Extension (iOS)" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5E3D862B2F89A0E400D2DD17 /* Debug */,
+				5E3D862C2F89A0E400D2DD17 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5E3D862E2F89A0E400D2DD17 /* Build configuration list for PBXNativeTarget "Aging tabs (iOS)" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5E3D862F2F89A0E400D2DD17 /* Debug */,
+				5E3D86302F89A0E400D2DD17 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5E3D86312F89A0E400D2DD17 /* Build configuration list for PBXNativeTarget "Aging tabs Extension (macOS)" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5E3D86322F89A0E400D2DD17 /* Debug */,
+				5E3D86332F89A0E400D2DD17 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5E3D86352F89A0E400D2DD17 /* Build configuration list for PBXNativeTarget "Aging tabs (macOS)" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5E3D86362F89A0E400D2DD17 /* Debug */,
+				5E3D86372F89A0E400D2DD17 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 5E3D85D92F89A0E100D2DD17 /* Project object */;
+}
