@@ -1,10 +1,3 @@
-//
-//  AppDelegate.swift
-//  iOS (App)
-//
-//  Created by ZZZ on 11.04.26.
-//
-
 import UIKit
 
 @main

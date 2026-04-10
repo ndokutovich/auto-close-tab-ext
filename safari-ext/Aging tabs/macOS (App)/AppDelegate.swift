@@ -1,10 +1,3 @@
-//
-//  AppDelegate.swift
-//  macOS (App)
-//
-//  Created by ZZZ on 11.04.26.
-//
-
 import Cocoa
 
 @main

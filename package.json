@@ -15,6 +15,7 @@
     "package:safari": "node scripts/pack.mjs safari",
     "package:source": "node scripts/pack.mjs source",
     "package": "node scripts/pack.mjs",
+    "sync:safari": "node scripts/sync-safari-version.mjs",
     "test": "vitest run --exclude 'scenarios/**'",
     "test:watch": "vitest"
   },

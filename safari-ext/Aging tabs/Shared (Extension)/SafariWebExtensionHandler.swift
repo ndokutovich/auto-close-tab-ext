@@ -1,10 +1,3 @@
-//
-//  SafariWebExtensionHandler.swift
-//  Shared (Extension)
-//
-//  Created by ZZZ on 11.04.26.
-//
-
 import SafariServices
 import os.log
 
