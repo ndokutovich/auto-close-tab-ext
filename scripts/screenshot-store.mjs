@@ -1,6 +1,10 @@
 /**
  * Generate Chrome Web Store / AMO ready screenshots at 1280x800.
- * Run: node scripts/screenshot-store.mjs
+ *
+ * Usage:
+ *   node scripts/screenshot-store.mjs              # English (default)
+ *   node scripts/screenshot-store.mjs --locale=ru  # Russian
+ *   node scripts/screenshot-store.mjs --all        # Both en + ru
  *
  * CWS requires screenshots at exactly 1280x800 or 640x400. We render the popup
  * centered on a branded gradient canvas and the options page cropped to 1280x800.
@@ -15,10 +19,26 @@ import { mkdirSync } from 'fs';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const EXT_PATH = resolve(__dirname, '../dist/chrome');
 const ROOT = resolve(__dirname, '..');
-const OUT = resolve(__dirname, '../screenshots/store');
-mkdirSync(OUT, { recursive: true });
+const STORE_DIR = resolve(__dirname, '../screenshots/store');
 
 const SHOT = { width: 1280, height: 800 };
+
+const CAPTIONS = {
+  en: {
+    popup: 'Recover closed tabs from the graveyard',
+    light: 'Light & dark themes, follows the system',
+    sorted: 'Sort closed tabs by domain or time',
+    search: 'Instant search across the graveyard',
+    paused: 'Global pause \u2014 freeze aging when you need it',
+  },
+  ru: {
+    popup: '\u0412\u043e\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u0438\u0442\u0435 \u0437\u0430\u043a\u0440\u044b\u0442\u044b\u0435 \u0432\u043a\u043b\u0430\u0434\u043a\u0438 \u0438\u0437 \u00ab\u043a\u043b\u0430\u0434\u0431\u0438\u0449\u0430\u00bb',
+    light: '\u0421\u0432\u0435\u0442\u043b\u0430\u044f \u0438 \u0442\u0451\u043c\u043d\u0430\u044f \u0442\u0435\u043c\u044b \u2014 \u0441\u043b\u0435\u0434\u0443\u0435\u0442 \u0437\u0430 \u0441\u0438\u0441\u0442\u0435\u043c\u043e\u0439',
+    sorted: '\u0421\u043e\u0440\u0442\u0438\u0440\u043e\u0432\u043a\u0430 \u043f\u043e \u0434\u043e\u043c\u0435\u043d\u0443 \u0438\u043b\u0438 \u0432\u0440\u0435\u043c\u0435\u043d\u0438',
+    search: '\u041c\u0433\u043d\u043e\u0432\u0435\u043d\u043d\u044b\u0439 \u043f\u043e\u0438\u0441\u043a \u043f\u043e \u043a\u043b\u0430\u0434\u0431\u0438\u0449\u0443',
+    paused: '\u0413\u043b\u043e\u0431\u0430\u043b\u044c\u043d\u0430\u044f \u043f\u0430\u0443\u0437\u0430 \u2014 \u0437\u0430\u043c\u043e\u0440\u043e\u0437\u044c\u0442\u0435 \u0441\u0442\u0430\u0440\u0435\u043d\u0438\u0435 \u043d\u0430 \u0432\u0440\u0435\u043c\u044f \u0440\u0430\u0431\u043e\u0442\u044b',
+  },
+};
 
 // Build first
 console.log('Building...');
@@ -33,7 +53,6 @@ async function wrapPopupShowcase(page, { scheme, caption }) {
   await page.setViewportSize(SHOT);
   await page.evaluate(
     ({ scheme, caption }) => {
-      // Move the entire popup body into a fixed-size card.
       const card = document.createElement('div');
       card.id = '__shot_card__';
       while (document.body.firstChild) {
@@ -41,7 +60,6 @@ async function wrapPopupShowcase(page, { scheme, caption }) {
       }
       document.body.appendChild(card);
 
-      // Caption element (optional).
       const capEl = document.createElement('div');
       capEl.id = '__shot_caption__';
       capEl.textContent = caption;
@@ -95,26 +113,34 @@ async function wrapPopupShowcase(page, { scheme, caption }) {
   await page.waitForTimeout(300);
 }
 
-async function shotPopup(context, extId, file, opts) {
+async function shotPopup(context, extId, outDir, file, opts) {
   const page = await context.newPage();
   await page.goto(`chrome-extension://${extId}/popup/popup.html`);
   await page.waitForTimeout(600);
   if (opts.prepare) await opts.prepare(page);
   await wrapPopupShowcase(page, { scheme: opts.scheme, caption: opts.caption });
   await page.screenshot({
-    path: resolve(OUT, file),
+    path: resolve(outDir, file),
     clip: { x: 0, y: 0, ...SHOT },
   });
-  console.log(`Screenshot: ${file}`);
+  console.log(`  ${file}`);
   await page.close();
 }
 
-async function main() {
+async function generateForLocale(locale) {
+  const outDir = locale === 'en' ? STORE_DIR : resolve(STORE_DIR, locale);
+  mkdirSync(outDir, { recursive: true });
+  const cap = CAPTIONS[locale];
+
+  console.log(`\nGenerating ${locale.toUpperCase()} screenshots -> ${outDir}`);
+
   const context = await chromium.launchPersistentContext('', {
     headless: false,
+    locale,
     args: [
       `--disable-extensions-except=${EXT_PATH}`,
       `--load-extension=${EXT_PATH}`,
+      `--lang=${locale}`,
       '--no-first-run',
       '--disable-default-apps',
     ],
@@ -122,8 +148,7 @@ async function main() {
     colorScheme: 'dark',
   });
 
-  // Find extension ID. MV3 service workers register lazily, so we open a
-  // dummy page first to give Chromium a chance to spin the worker up.
+  // Find extension ID
   const warmup = await context.newPage();
   await warmup.goto('about:blank').catch(() => {});
   await warmup.waitForTimeout(1500);
@@ -142,8 +167,6 @@ async function main() {
     const sw = await context.waitForEvent('serviceworker', { timeout: 15000 }).catch(() => null);
     extId = sw?.url().split('/')[2] ?? findExtId();
   }
-  // Some Chromium builds only expose the worker after the first navigation
-  // targeting the extension origin. Poll a few times as a last resort.
   for (let i = 0; i < 10 && !extId; i++) {
     await warmup.waitForTimeout(500);
     extId = findExtId();
@@ -151,9 +174,9 @@ async function main() {
   await warmup.close();
 
   if (!extId) throw new Error('Failed to locate extension service worker');
-  console.log('Extension ID:', extId);
+  console.log(`  Extension ID: ${extId}`);
 
-  // Open several real tabs so the background tracker has something to show
+  // Open several real tabs
   const urls = [
     'https://github.com',
     'https://developer.mozilla.org',
@@ -167,7 +190,7 @@ async function main() {
   }
   await context.pages()[0].waitForTimeout(2000);
 
-  // Seed graveyard with realistic entries
+  // Seed graveyard
   const seedPage = await context.newPage();
   await seedPage.goto(`chrome-extension://${extId}/options/options.html`);
   await seedPage.waitForTimeout(800);
@@ -191,62 +214,62 @@ async function main() {
   await seedPage.waitForTimeout(500);
   await seedPage.close();
 
-  // --- Popup screenshots (centered in 1280x800 showcase) ---
-  await shotPopup(context, extId, '01-popup-dark.png', {
+  // --- Popup screenshots ---
+  await shotPopup(context, extId, outDir, '01-popup-dark.png', {
     scheme: 'dark',
-    caption: 'Recover closed tabs from the graveyard',
+    caption: cap.popup,
   });
-  await shotPopup(context, extId, '02-popup-light.png', {
+  await shotPopup(context, extId, outDir, '02-popup-light.png', {
     scheme: 'light',
-    caption: 'Light & dark themes, follows the system',
+    caption: cap.light,
   });
-  await shotPopup(context, extId, '03-popup-sorted-domain.png', {
+  await shotPopup(context, extId, outDir, '03-popup-sorted-domain.png', {
     scheme: 'dark',
-    caption: 'Sort closed tabs by domain or time',
+    caption: cap.sorted,
     prepare: async (page) => {
       await page.selectOption('#sort-mode', 'domain');
       await page.waitForTimeout(200);
     },
   });
-  await shotPopup(context, extId, '04-popup-search.png', {
+  await shotPopup(context, extId, outDir, '04-popup-search.png', {
     scheme: 'dark',
-    caption: 'Instant search across the graveyard',
+    caption: cap.search,
     prepare: async (page) => {
       await page.fill('#search', 'github');
       await page.waitForTimeout(200);
     },
   });
-  await shotPopup(context, extId, '05-popup-paused.png', {
+  await shotPopup(context, extId, outDir, '05-popup-paused.png', {
     scheme: 'dark',
-    caption: 'Global pause — freeze aging when you need it',
+    caption: cap.paused,
     prepare: async (page) => {
       await page.click('#btn-pause');
       await page.waitForTimeout(400);
     },
   });
 
-  // --- Options screenshot (1280x800, cropped top region) ---
+  // --- Options screenshots ---
   const optionsPage = await context.newPage();
   await optionsPage.goto(`chrome-extension://${extId}/options/options.html`);
   await optionsPage.emulateMedia({ colorScheme: 'dark' });
   await optionsPage.setViewportSize(SHOT);
   await optionsPage.waitForTimeout(600);
   await optionsPage.screenshot({
-    path: resolve(OUT, '06-options-dark.png'),
+    path: resolve(outDir, '06-options-dark.png'),
     clip: { x: 0, y: 0, ...SHOT },
   });
-  console.log('Screenshot: 06-options-dark.png');
+  console.log('  06-options-dark.png');
 
   await optionsPage.emulateMedia({ colorScheme: 'light' });
   await optionsPage.waitForTimeout(300);
   await optionsPage.screenshot({
-    path: resolve(OUT, '07-options-light.png'),
+    path: resolve(outDir, '07-options-light.png'),
     clip: { x: 0, y: 0, ...SHOT },
   });
-  console.log('Screenshot: 07-options-light.png');
+  console.log('  07-options-light.png');
   await optionsPage.close();
 
-  // Cleanup graveyard (best-effort)
+  // Cleanup graveyard
   const cleanupPage = await context.newPage();
   await cleanupPage.goto(`chrome-extension://${extId}/options/options.html`);
   await cleanupPage.evaluate(async () => {
@@ -255,10 +278,19 @@ async function main() {
   await cleanupPage.close();
 
   await context.close();
-  console.log(`\nDone! Screenshots in: ${OUT}`);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+// --- CLI ---
+const args = process.argv.slice(2);
+const doAll = args.includes('--all');
+const localeArg = args.find(a => a.startsWith('--locale='));
+const locales = doAll
+  ? ['en', 'ru']
+  : localeArg
+    ? [localeArg.split('=')[1]]
+    : ['en'];
+
+for (const locale of locales) {
+  await generateForLocale(locale);
+}
+console.log('\nDone!');
