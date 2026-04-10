@@ -1,6 +1,6 @@
 # Privacy Policy — Aging Tabs
 
-**Last updated:** March 22, 2026
+**Last updated:** April 10, 2026
 
 ## Overview
 
