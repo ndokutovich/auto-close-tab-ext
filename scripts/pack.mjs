@@ -83,11 +83,12 @@ function packSource(zipPath) {
 }
 
 const targets = process.argv.slice(2);
-const jobs = targets.length > 0 ? targets : ['chrome', 'firefox', 'source'];
+const jobs = targets.length > 0 ? targets : ['chrome', 'firefox', 'safari', 'source'];
 
 for (const t of jobs) {
   if (t === 'chrome') packDir(resolve(ROOT, 'dist/chrome'), resolve(ROOT, 'dist/aging-tabs-chrome.zip'), 'chrome');
   else if (t === 'firefox') packDir(resolve(ROOT, 'dist/firefox'), resolve(ROOT, 'dist/aging-tabs-firefox.zip'), 'firefox');
+  else if (t === 'safari') packDir(resolve(ROOT, 'dist/safari'), resolve(ROOT, 'dist/aging-tabs-safari.zip'), 'safari');
   else if (t === 'source') packSource(resolve(ROOT, 'dist/aging-tabs-source.zip'));
   else {
     console.error(`Unknown target: ${t}`);

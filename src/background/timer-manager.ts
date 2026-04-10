@@ -97,7 +97,15 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
       if (!tab) continue;
 
       if (settings.expireAction === 'discard') {
-        await browser.tabs.discard(tabId);
+        if (typeof browser.tabs.discard === 'function') {
+          await browser.tabs.discard(tabId);
+        } else {
+          // Safari doesn't support tabs.discard — fall back to close
+          const entry = await buryTab(tab, settings.graveyardMaxSize);
+          await browser.tabs.remove(tabId);
+          tabCount--;
+          showCloseNotification(tab, entry.id);
+        }
       } else {
         const entry = await buryTab(tab, settings.graveyardMaxSize);
         await browser.tabs.remove(tabId);
@@ -126,7 +134,7 @@ function showCloseNotification(tab: browser.Tabs.Tab, entryId: string): void {
 
   browser.notifications.create(notifId, {
     type: 'basic',
-    iconUrl: browser.runtime.getURL('icons/icon-128.svg'),
+    iconUrl: browser.runtime.getURL('icons/icon-128.png'),
     title: msg('notifTabClosed'),
     message: domain ? `${title} (${domain})` : title,
   }).catch((err: unknown) => {

@@ -9,7 +9,7 @@ const watchMode = args.includes('--watch');
 const browserArg = args.find(a => a.startsWith('--browser='));
 const browsers = browserArg
   ? [browserArg.split('=')[1]]
-  : ['chrome', 'firefox'];
+  : ['chrome', 'firefox', 'safari'];
 
 const entryPoints = {
   background: resolve(__dirname, 'src/background/index.ts'),

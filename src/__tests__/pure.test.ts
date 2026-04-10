@@ -154,6 +154,10 @@ describe('isRestrictedUrl', () => {
     expect(isRestrictedUrl('moz-extension://abc/popup.html')).toBe(true);
   });
 
+  it('detects safari-web-extension:// URLs', () => {
+    expect(isRestrictedUrl('safari-web-extension://abc/popup.html')).toBe(true);
+  });
+
   it('allows normal URLs', () => {
     expect(isRestrictedUrl('https://example.com')).toBe(false);
   });

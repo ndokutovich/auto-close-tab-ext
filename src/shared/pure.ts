@@ -50,7 +50,7 @@ export function extractDomain(url: string | undefined): string {
  */
 export function isRestrictedUrl(url: string | undefined): boolean {
   if (!url) return false;
-  const restricted = ['chrome://', 'about:', 'chrome-extension://', 'moz-extension://'];
+  const restricted = ['chrome://', 'about:', 'chrome-extension://', 'moz-extension://', 'safari-web-extension://'];
   return restricted.some(prefix => url.startsWith(prefix));
 }
 
