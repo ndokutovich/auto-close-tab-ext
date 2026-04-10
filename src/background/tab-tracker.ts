@@ -107,11 +107,16 @@ export async function setPause(paused: boolean): Promise<void> {
     pausedSince = null;
     await setPausedSince(null);
     await flush();
-    // If we were idle at any point during the pause, reset the idle tracker
-    // so post-unpause idle compensation starts fresh from now.
+    // Clear any stale idleSince. Rationale: clicking the unpause button
+    // requires mouse movement, so at this moment the OS is guaranteed to be
+    // active. A stale idleSince (from a pre-pause idle period that was never
+    // cleared because the idle handler early-returns while paused) would
+    // otherwise survive and break the next idle→active compensation: the
+    // idle handler only updates idleSince when it is null, so on the next
+    // real idle cycle the shift would cover all post-resume work time.
     if (idleSince !== null) {
-      idleSince = now;
-      await browser.storage.local.set({ idleSince: now });
+      idleSince = null;
+      await browser.storage.local.remove('idleSince');
     }
   }
 }

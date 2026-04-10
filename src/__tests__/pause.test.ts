@@ -173,4 +173,38 @@ describe('pause integration', () => {
     expect(newLastAccessed).toBeLessThanOrEqual(Date.now());
     expect(Date.now() - newLastAccessed).toBeLessThan(500);
   });
+
+  it('setPause(false) clears stale idleSince instead of rewriting it to now', async () => {
+    // REGRESSION (Codex P1): on resume, idleSince was rewritten to `now`.
+    // The idle handler only updates idleSince when it is null, so the next
+    // idle → active cycle would shift tabs by (work_after_resume + real_idle)
+    // instead of just real_idle — over-shifting by the entire post-resume
+    // work interval.
+    //
+    // Scenario: system went idle → user paused → became active during pause
+    // (the idle handler early-returns while paused, so idleSince stays stale)
+    // → user resumed. At that moment the OS is definitely active (clicking
+    // the unpause button requires mouse movement), so idleSince must be
+    // cleared to null — not rewritten — so the next real idle event can set
+    // a fresh timestamp.
+    const now = Date.now();
+    store['idleSince'] = now - 3_600_000;      // idle started 1 hour ago
+    store['pausedSince'] = now - 1_800_000;    // paused 30 minutes ago
+    store['tabTimes'] = { 1: now - 7_200_000 };
+    store['tabStages'] = { 1: 0 };
+
+    const tracker = await import('../background/tab-tracker');
+    const browser = (await import('webextension-polyfill')).default;
+    vi.mocked(browser.tabs.query).mockResolvedValue([
+      { id: 1, active: true, pinned: false, url: 'https://example.com' } as any,
+    ]);
+
+    await tracker.initTracker();
+    expect(tracker.isPaused()).toBe(true);
+
+    await tracker.setPause(false);
+
+    // Must be cleared, not rewritten to now
+    expect(store['idleSince']).toBeUndefined();
+  });
 });
