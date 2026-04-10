@@ -5,6 +5,9 @@
       <stop offset="100%" stop-color="#71717a"/>
     </linearGradient>
   </defs>
-  <rect x="8" y="30" width="112" height="82" rx="10" fill="url(#aging)" opacity="0.9"/>
-  <rect x="8" y="14" width="54" height="26" rx="8" fill="url(#aging)"/>
+  <!-- Artwork fits within 96x96 centered zone (16px padding on all sides) -->
+  <!-- Tab handle -->
+  <rect x="16" y="22" width="46" height="22" rx="7" fill="url(#aging)"/>
+  <!-- Browser window body -->
+  <rect x="16" y="36" width="96" height="70" rx="9" fill="url(#aging)" opacity="0.9"/>
 </svg>
