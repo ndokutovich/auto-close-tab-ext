@@ -56,13 +56,26 @@ export function setupMessageListener(): void {
           if (!isAllowedFaviconUrl(url)) {
             return Promise.resolve({ ok: false });
           }
+          const MAX_FAVICON_BYTES = 1024 * 1024; // 1 MB
           return fetch(url)
-            .then(res => res.blob())
-            .then(blob => new Promise<string>((resolve) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result as string);
-              reader.readAsDataURL(blob);
-            }))
+            .then(res => {
+              if (!res.ok) throw new Error(`favicon fetch ${res.status}`);
+              const len = res.headers.get('content-length');
+              if (len && Number(len) > MAX_FAVICON_BYTES) {
+                throw new Error('favicon too large');
+              }
+              return res.blob();
+            })
+            .then(blob => {
+              if (blob.size > MAX_FAVICON_BYTES) {
+                throw new Error('favicon too large');
+              }
+              return new Promise<string>((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.readAsDataURL(blob);
+              });
+            })
             .then(dataUrl => {
               if (sender.tab?.id) {
                 browser.tabs.sendMessage(sender.tab.id, {

@@ -13,11 +13,13 @@ function generateId(): string {
 
 export async function buryTab(
   tab: browser.Tabs.Tab,
-  maxSize: number
+  maxSize: number,
+  cachedCleanTitle?: string,
 ): Promise<GraveyardEntry> {
   const domain = extractDomain(tab.url);
-  let title = stripAgingPrefix(tab.title || 'Untitled');
-  // Stage-4 blink replaces the entire title — original is unrecoverable
+  // Prefer the cached clean title (captured before stage-4 blink replaced it).
+  // Fall back to stripping the aging prefix from the current tab title.
+  let title = cachedCleanTitle || stripAgingPrefix(tab.title || 'Untitled');
   if (title === BLINK_CLOSING_TEXT) {
     title = domain || 'Untitled';
   }

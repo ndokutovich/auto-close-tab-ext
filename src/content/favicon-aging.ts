@@ -3,6 +3,7 @@ import type { AgingStage } from '../shared/types';
 import { STAGE_GRAYSCALE } from '../shared/constants';
 
 let originalFaviconUrl: string | null = null;
+let lastAppliedDataUrl: string | null = null;
 let canvas: HTMLCanvasElement | null = null;
 
 function getOrCreateCanvas(): HTMLCanvasElement {
@@ -55,9 +56,14 @@ export function handleFaviconAging(stage: AgingStage, _timeRemainingMs: number):
     return;
   }
 
-  // Capture original on first aging
+  // Capture original on first aging, re-capture if the page changed its favicon
+  // (e.g. notification badges, dynamic favicons). We compare against what we
+  // last applied to distinguish page-initiated changes from our own grayscale.
+  const currentUrl = getCurrentFaviconUrl();
   if (originalFaviconUrl === null) {
-    originalFaviconUrl = getCurrentFaviconUrl();
+    originalFaviconUrl = currentUrl;
+  } else if (currentUrl !== lastAppliedDataUrl && currentUrl !== originalFaviconUrl) {
+    originalFaviconUrl = currentUrl;
   }
 
   const percentage = STAGE_GRAYSCALE[stage];
@@ -67,6 +73,7 @@ export function handleFaviconAging(stage: AgingStage, _timeRemainingMs: number):
   img.onload = () => {
     try {
       const dataUrl = applyGrayscale(img, percentage);
+      lastAppliedDataUrl = dataUrl;
       setFavicon(dataUrl);
     } catch {
       // Canvas tainted by CORS — request background to fetch
@@ -85,6 +92,7 @@ export function resetFavicon(): void {
   if (originalFaviconUrl !== null) {
     setFavicon(originalFaviconUrl);
     originalFaviconUrl = null;
+    lastAppliedDataUrl = null;
   }
 }
 
@@ -98,7 +106,11 @@ async function requestFaviconViaBackground(url: string, percentage: number): Pro
         browser.runtime.onMessage.removeListener(handler);
         clearTimeout(timeoutId);
         const img = new Image();
-        img.onload = () => setFavicon(applyGrayscale(img, percentage));
+        img.onload = () => {
+          const dataUrl = applyGrayscale(img, percentage);
+          lastAppliedDataUrl = dataUrl;
+          setFavicon(dataUrl);
+        };
         img.src = message.dataUrl;
       }
     };
@@ -109,11 +121,16 @@ async function requestFaviconViaBackground(url: string, percentage: number): Pro
       browser.runtime.onMessage.removeListener(handler);
     }, 5000);
 
-    browser.runtime.sendMessage({
+    const res = await browser.runtime.sendMessage({
       type: 'FETCH_FAVICON_REQUEST',
       url,
       requestId,
     });
+    // Background returns { ok: false } when fetch fails — clean up early
+    if (res && !res.ok) {
+      clearTimeout(timeoutId);
+      browser.runtime.onMessage.removeListener(handler);
+    }
   } catch {
     // Background not available
   }

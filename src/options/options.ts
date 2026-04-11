@@ -1,8 +1,7 @@
 import browser from 'webextension-polyfill';
 import type { Settings, GraveyardEntry } from '../shared/types';
-import { defaultFavicon } from '../shared/pure';
-import { FALLBACK_FAVICON } from '../shared/constants';
-import { msg, applyI18n, formatTimeI18n } from '../shared/i18n';
+import { createEntryElement } from '../shared/graveyard-ui';
+import { msg, applyI18n } from '../shared/i18n';
 
 applyI18n();
 
@@ -84,48 +83,17 @@ async function loadGraveyard(): Promise<void> {
 
   const fragment = document.createDocumentFragment();
   for (const entry of entries) {
-    fragment.appendChild(createEntryElement(entry));
+    fragment.appendChild(createOptionsEntry(entry));
   }
   graveyardListEl.appendChild(fragment);
 }
 
-function createEntryElement(entry: GraveyardEntry): HTMLElement {
-  const item = document.createElement('div');
-  item.className = 'graveyard-item';
-  item.dataset.url = entry.url;
-
-  const favicon = document.createElement('img');
-  favicon.className = 'favicon';
-  favicon.src = entry.faviconUrl || defaultFavicon(entry.url);
-  favicon.onerror = () => { favicon.src = FALLBACK_FAVICON; };
-
-  const info = document.createElement('div');
-  info.className = 'info';
-
-  const titleSpan = document.createElement('span');
-  titleSpan.className = 'tab-title';
-  titleSpan.textContent = entry.title;
-
-  const domainSpan = document.createElement('span');
-  domainSpan.className = 'tab-domain';
-  domainSpan.textContent = entry.domain;
-
-  info.appendChild(titleSpan);
-  info.appendChild(domainSpan);
-
-  const timeSpan = document.createElement('span');
-  timeSpan.className = 'tab-time';
-  timeSpan.textContent = formatTimeI18n(entry.closedAt);
-
-  item.appendChild(favicon);
-  item.appendChild(info);
-  item.appendChild(timeSpan);
-
+function createOptionsEntry(entry: GraveyardEntry): HTMLElement {
+  const item = createEntryElement(entry);
   item.addEventListener('click', async () => {
     await browser.runtime.sendMessage({ type: 'RESTORE_TAB', url: entry.url });
     await loadGraveyard();
   });
-
   return item;
 }
 

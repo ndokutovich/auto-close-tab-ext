@@ -2,9 +2,10 @@ import browser from 'webextension-polyfill';
 import type { AgingStage } from '../shared/types';
 import {
   getTabTimes, setTabTimes, getTabStages, setTabStages, unlockTab,
-  getPausedSince, setPausedSince,
+  getPausedSince, setPausedSince, getLockedTabs, setLockedTabs,
 } from '../shared/storage';
 import { shiftTabTimes } from '../shared/pure';
+import { clearCachedTitle } from './timer-manager';
 
 // In-memory cache, flushed to storage when dirty
 let tabTimes: Record<number, number> = {};
@@ -15,6 +16,11 @@ let idleSince: number | null = null;
 let pausedSince: number | null = null;
 
 let initPromise: Promise<void> | null = null;
+
+// Serialize all operations that touch tabTimes/idleSince/pausedSince to avoid
+// races between idle state transitions and pause/unpause. Used by both the
+// idle.onStateChanged handler and setPause.
+let idleOpChain: Promise<void> = Promise.resolve();
 
 export function ensureReady(freshInstall = false): Promise<void> {
   if (!initPromise) {
@@ -66,7 +72,16 @@ export async function initTracker(freshInstall = false): Promise<void> {
     }
   }
 
-  // Init active tab ID synchronously from the query we already have
+  // Prune locked tabs that no longer exist (stale IDs from previous sessions)
+  const lockedTabs = await getLockedTabs();
+  const prunedLocked = lockedTabs.filter(id => openIds.has(id));
+  if (prunedLocked.length < lockedTabs.length) {
+    await setLockedTabs(prunedLocked);
+  }
+
+  // Recover active tab from the query. The active tab is immune from closure
+  // (immunity check), and onActivated will refresh its timer on the next switch.
+  // No need to touch tabTimes here — preserves persisted state correctly.
   const activeTab = tabs.find(t => t.active);
   if (activeTab?.id) currentActiveTabId = activeTab.id;
 
@@ -95,45 +110,44 @@ export function getIdleSinceInternal(): number | null {
 /**
  * Toggle the global pause state. On unpause, shifts all tabTimes forward
  * by the pause duration (capped at `now` for tabs activated during pause).
+ *
+ * Chained through idleOpChain to serialize with idle state transitions —
+ * both modify tabTimes/idleSince, so concurrent execution could double-shift.
  */
-export async function setPause(paused: boolean): Promise<void> {
-  await ensureReady();
-  if (paused) {
-    if (pausedSince !== null) return; // already paused
-    pausedSince = Date.now();
-    await setPausedSince(pausedSince);
-  } else {
-    if (pausedSince === null) return; // already running
-    const now = Date.now();
-    const shiftMs = Math.max(0, now - pausedSince);
-    // Atomic sync block: update ALL in-memory state before any await. The idle
-    // handler is serialized on idleOpChain, but setPause is not — so on await
-    // boundaries a concurrent handler could observe the intermediate state
-    // (pausedSince === null but idleSince still stale) and apply a bogus
-    // over-shift on top of the pause shift. Clearing both synchronously
-    // guarantees handlers see either "paused" (early return) or "running with
-    // no pending idle" (no-op).
-    //
-    // Rationale for clearing idleSince (vs rewriting to `now`): clicking the
-    // unpause button requires mouse movement, so the OS is guaranteed active
-    // at this moment. A stale idleSince (from a pre-pause idle period that
-    // was never cleared because the idle handler early-returned while paused)
-    // would otherwise break the next idle→active compensation — the handler
-    // only updates idleSince when it is null, so the next real idle cycle
-    // would shift tabs by the entire post-resume work interval.
-    shiftTabTimes(tabTimes, shiftMs, now);
-    dirty = true;
-    const hadStaleIdle = idleSince !== null;
-    pausedSince = null;
-    idleSince = null;
-    // Now persist. Order doesn't matter for correctness — in-memory state is
-    // already consistent.
-    await setPausedSince(null);
-    await flush();
-    if (hadStaleIdle) {
-      await browser.storage.local.remove('idleSince');
+export function setPause(paused: boolean): Promise<void> {
+  const task = idleOpChain.then(async () => {
+    await ensureReady();
+    if (paused) {
+      if (pausedSince !== null) return; // already paused
+      pausedSince = Date.now();
+      await setPausedSince(pausedSince);
+    } else {
+      if (pausedSince === null) return; // already running
+      const now = Date.now();
+      const shiftMs = Math.max(0, now - pausedSince);
+      // Atomic sync block: update ALL in-memory state before any await.
+      // Clearing both synchronously guarantees handlers see either "paused"
+      // (early return) or "running with no pending idle" (no-op).
+      //
+      // Rationale for clearing idleSince (vs rewriting to `now`): clicking the
+      // unpause button requires mouse movement, so the OS is guaranteed active
+      // at this moment. A stale idleSince would otherwise break the next
+      // idle→active compensation.
+      shiftTabTimes(tabTimes, shiftMs, now);
+      dirty = true;
+      const hadStaleIdle = idleSince !== null;
+      pausedSince = null;
+      idleSince = null;
+      // Now persist — in-memory state is already consistent.
+      await setPausedSince(null);
+      await flush();
+      if (hadStaleIdle) {
+        await browser.storage.local.remove('idleSince');
+      }
     }
-  }
+  });
+  idleOpChain = task.catch(() => {}); // don't break the chain on error
+  return task;
 }
 
 export async function recordActivation(tabId: number): Promise<void> {
@@ -208,6 +222,7 @@ export function setupTabListeners(): void {
   browser.tabs.onRemoved.addListener(async (tabId) => {
     await ensureReady();
     removeTab(tabId);
+    clearCachedTitle(tabId);
     unlockTab(tabId).catch(() => {});
   });
 
@@ -226,9 +241,8 @@ export function setupTabListeners(): void {
 
     browser.idle.setDetectionInterval(60);
 
-    // Serialize all idle state transitions through a single chain to eliminate
-    // the set/remove race when idle → active → idle fires in rapid succession.
-    let idleOpChain: Promise<void> = Promise.resolve();
+    // idleOpChain is module-level — shared with setPause to serialize all
+    // operations that touch tabTimes/idleSince/pausedSince.
 
     browser.idle.onStateChanged.addListener((state) => {
       idleOpChain = idleOpChain.then(async () => {

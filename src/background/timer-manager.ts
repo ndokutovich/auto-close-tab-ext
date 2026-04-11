@@ -1,7 +1,7 @@
 import browser from 'webextension-polyfill';
 import type { AgingStage, BgToContentMsg } from '../shared/types';
 import { ALARM_NAME, CHECK_INTERVAL_SECONDS } from '../shared/constants';
-import { computeAgingStage, extractDomain } from '../shared/pure';
+import { computeAgingStage, extractDomain, stripAgingPrefix } from '../shared/pure';
 import { msg } from '../shared/i18n';
 import { getSettings, getGraveyard, getLockedTabs } from '../shared/storage';
 import {
@@ -15,6 +15,42 @@ import {
 } from './tab-tracker';
 import { buildImmunityContext, isImmune } from './immunity';
 import { buryTab, restoreTab, removeEntry, pruneExpiredEntries } from './graveyard';
+
+// Cache clean titles for tabs before stage-4 blink replaces them with
+// "Closing soon...". Updated each alarm tick for tabs at stages 0-3.
+// Persisted to storage.local so SW restarts don't lose them.
+const CLEAN_TITLES_KEY = 'cleanTitles';
+let cleanTitles = new Map<number, string>();
+let cleanTitlesLoaded = false;
+
+async function loadCleanTitles(openTabIds: Set<number>): Promise<void> {
+  if (cleanTitlesLoaded) return;
+  cleanTitlesLoaded = true;
+  try {
+    const res = await browser.storage.local.get(CLEAN_TITLES_KEY);
+    const stored = res[CLEAN_TITLES_KEY];
+    if (stored && typeof stored === 'object') {
+      // Prune stale entries from previous sessions (tabIds get recycled)
+      for (const [k, v] of Object.entries(stored)) {
+        const tabId = Number(k);
+        if (openTabIds.has(tabId)) {
+          cleanTitles.set(tabId, v as string);
+        }
+      }
+    }
+  } catch { /* first run or corrupt */ }
+}
+
+async function saveCleanTitles(): Promise<void> {
+  const obj: Record<string, string> = {};
+  for (const [k, v] of cleanTitles) obj[String(k)] = v;
+  await browser.storage.local.set({ [CLEAN_TITLES_KEY]: obj }).catch(() => {});
+}
+
+/** Remove cached title when a tab is closed. */
+export function clearCachedTitle(tabId: number): void {
+  cleanTitles.delete(tabId);
+}
 
 export async function startTimer(): Promise<void> {
   // Alarms persist across SW restarts in MV3. Don't recreate if already scheduled —
@@ -50,6 +86,9 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
   // Single query for all tabs, build lookup map — avoids N+1 tabs.get() calls
   const allTabs = await browser.tabs.query({});
   const tabMap = new Map(allTabs.map(t => [t.id!, t]));
+  const openTabIds = new Set(allTabs.map(t => t.id!));
+
+  await loadCleanTitles(openTabIds);
 
   const lockedTabs = await getLockedTabs();
   const immunityCtx = buildImmunityContext(settings, allTabs, lockedTabs);
@@ -69,6 +108,8 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
         setStage(tabId, 0);
         sendAgingUpdate(tabId, 0, timeoutMs);
       }
+      // Cache clean title while tab is immune / at stage 0
+      if (tab.title) cleanTitles.set(tabId, stripAgingPrefix(tab.title));
       continue;
     }
 
@@ -82,9 +123,17 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
     const newStage = computeAgingStage(elapsed, timeoutMs);
     const oldStage = getStage(tabId);
 
+    // Cache clean title while still recoverable (before stage-4 blink)
+    if (newStage < 4 && tab.title) {
+      cleanTitles.set(tabId, stripAgingPrefix(tab.title));
+    }
+
     if (newStage !== oldStage) {
       setStage(tabId, newStage);
-      sendAgingUpdate(tabId, newStage, timeoutMs - elapsed);
+      // Discarded tabs can't receive messages — skip the content script update
+      if (!tab.discarded) {
+        sendAgingUpdate(tabId, newStage, timeoutMs - elapsed);
+      }
     }
   }
 
@@ -96,28 +145,33 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
       const tab = tabMap.get(tabId);
       if (!tab) continue;
 
+      const cachedTitle = cleanTitles.get(tabId);
+
       if (settings.expireAction === 'discard') {
         if (typeof browser.tabs.discard === 'function') {
+          if (tab.discarded) continue; // already discarded — nothing to do
           await browser.tabs.discard(tabId);
         } else {
           // Safari doesn't support tabs.discard — fall back to close
-          const entry = await buryTab(tab, settings.graveyardMaxSize);
+          const entry = await buryTab(tab, settings.graveyardMaxSize, cachedTitle);
           await browser.tabs.remove(tabId);
           tabCount--;
           showCloseNotification(tab, entry.id);
         }
       } else {
-        const entry = await buryTab(tab, settings.graveyardMaxSize);
+        const entry = await buryTab(tab, settings.graveyardMaxSize, cachedTitle);
         await browser.tabs.remove(tabId);
         tabCount--;
         showCloseNotification(tab, entry.id);
       }
+      cleanTitles.delete(tabId);
     } catch {
       // Tab already gone or can't be discarded
     }
   }
 
   await flush();
+  await saveCleanTitles();
 
   // Auto-expiry: prune graveyard entries older than the retention limit
   await pruneExpiredEntries(settings.graveyardRetentionDays);

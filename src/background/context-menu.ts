@@ -20,7 +20,10 @@ export function setupContextMenuListeners(): void {
   try {
     if (!browser.contextMenus) return;
 
-    // Dynamically update menu title to show current lock state
+    // Firefox: onShown fires right before the menu renders — show lock state.
+    // Chrome: onShown is unavailable and there's no reliable way to show
+    // per-tab state (right-clicking a background tab doesn't activate it),
+    // so we leave the neutral static title from createContextMenuItems.
     try {
       if (browser.contextMenus.onShown) {
         browser.contextMenus.onShown.addListener(async (info, tab) => {
@@ -37,7 +40,7 @@ export function setupContextMenuListeners(): void {
         });
       }
     } catch {
-      // onShown may not be available (Chrome)
+      // onShown may not be available
     }
 
     browser.contextMenus.onClicked.addListener(async (info, tab) => {
@@ -54,9 +57,11 @@ export function createContextMenuItems(): void {
   try {
     if (!browser.contextMenus) return;
     browser.contextMenus.removeAll().then(() => {
+      // Neutral toggle wording for Chrome (no onShown to show per-tab state).
+      // Firefox overrides dynamically via onShown before rendering the menu.
       browser.contextMenus.create({
         id: MENU_ID,
-        title: msg('menuLockTab'),
+        title: msg('cmdLockTab'),
         contexts: ['tab'],
       });
     }).catch(() => {});

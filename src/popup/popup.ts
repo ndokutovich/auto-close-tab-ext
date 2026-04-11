@@ -1,8 +1,8 @@
 import browser from 'webextension-polyfill';
 import type { GraveyardEntry } from '../shared/types';
-import { defaultFavicon, sortGraveyard, type GraveyardSortMode } from '../shared/pure';
-import { FALLBACK_FAVICON } from '../shared/constants';
-import { msg, applyI18n, formatTimeI18n } from '../shared/i18n';
+import { sortGraveyard, type GraveyardSortMode } from '../shared/pure';
+import { createEntryElement } from '../shared/graveyard-ui';
+import { msg, applyI18n } from '../shared/i18n';
 
 applyI18n();
 
@@ -38,46 +38,8 @@ function applyFilters(): void {
   render(entries);
 }
 
-function createEntryElement(entry: GraveyardEntry): HTMLElement {
-  const item = document.createElement('div');
-  item.className = 'graveyard-item';
-  item.dataset.url = entry.url;
-  item.dataset.entryId = entry.id;
-
-  const favicon = document.createElement('img');
-  favicon.className = 'favicon';
-  favicon.src = entry.faviconUrl || defaultFavicon(entry.url);
-  favicon.onerror = () => { favicon.src = FALLBACK_FAVICON; };
-
-  const info = document.createElement('div');
-  info.className = 'info';
-
-  const titleSpan = document.createElement('span');
-  titleSpan.className = 'tab-title';
-  titleSpan.textContent = entry.title;
-
-  const domainSpan = document.createElement('span');
-  domainSpan.className = 'tab-domain';
-  domainSpan.textContent = entry.domain;
-
-  info.appendChild(titleSpan);
-  info.appendChild(domainSpan);
-
-  const timeSpan = document.createElement('span');
-  timeSpan.className = 'tab-time';
-  timeSpan.textContent = formatTimeI18n(entry.closedAt);
-
-  const removeBtn = document.createElement('button');
-  removeBtn.className = 'btn-remove';
-  removeBtn.title = 'Remove from list';
-  removeBtn.textContent = '\u00d7';
-
-  item.appendChild(favicon);
-  item.appendChild(info);
-  item.appendChild(timeSpan);
-  item.appendChild(removeBtn);
-
-  return item;
+function createPopupEntry(entry: GraveyardEntry): HTMLElement {
+  return createEntryElement(entry, { storeEntryId: true, showRemoveButton: true });
 }
 
 function render(entries: GraveyardEntry[]): void {
@@ -98,7 +60,7 @@ function render(entries: GraveyardEntry[]): void {
 
   const fragment = document.createDocumentFragment();
   for (const entry of entries) {
-    fragment.appendChild(createEntryElement(entry));
+    fragment.appendChild(createPopupEntry(entry));
   }
   listEl.appendChild(fragment);
 }
