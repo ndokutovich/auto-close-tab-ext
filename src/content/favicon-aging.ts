@@ -125,7 +125,7 @@ async function requestFaviconViaBackground(url: string, percentage: number): Pro
       type: 'FETCH_FAVICON_REQUEST',
       url,
       requestId,
-    });
+    }) as { ok?: boolean } | undefined;
     // Background returns { ok: false } when fetch fails — clean up early
     if (res && !res.ok) {
       clearTimeout(timeoutId);
