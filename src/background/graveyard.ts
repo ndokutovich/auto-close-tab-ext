@@ -3,7 +3,7 @@ import type { GraveyardEntry } from '../shared/types';
 import { addToGraveyard, getGraveyard, setGraveyard, removeFromGraveyard, clearGraveyard as storageClearGraveyard } from '../shared/storage';
 import { stripAgingPrefix, extractDomain, expireGraveyardEntries } from '../shared/pure';
 import { BLINK_CLOSING_TEXT } from '../shared/constants';
-import { isPaused } from './tab-tracker';
+import { isPaused, ensureReady } from './tab-tracker';
 
 let idCounter = 0;
 
@@ -82,6 +82,9 @@ export async function syncBadge(): Promise<void> {
 }
 
 async function updateBadge(count: number): Promise<void> {
+  // Ensure pause state is hydrated — badge updates can fire before the alarm
+  // handler calls ensureReady() (e.g., removeEntry from notification click).
+  await ensureReady();
   // Pause indicator takes precedence over graveyard count — it's actionable
   // state the user needs to see immediately.
   if (isPaused()) {

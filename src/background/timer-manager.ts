@@ -75,11 +75,16 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
 
   await ensureReady();
 
+  const settings = await getSettings();
+
+  // Graveyard auto-expiry runs even while paused — it's a privacy cleanup,
+  // not tab aging. Leaving it behind the pause gate would let entries pile up
+  // for days if the user forgets to unpause.
+  await pruneExpiredEntries(settings.graveyardRetentionDays);
+
   // Globally paused — skip stage progression and closures entirely.
   // Timers will resume from frozen state when unpaused.
   if (isPaused()) return;
-
-  const settings = await getSettings();
   const timeoutMs = settings.timeoutMinutes * 60 * 1000;
   const now = Date.now();
 
@@ -172,9 +177,6 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
 
   await flush();
   await saveCleanTitles();
-
-  // Auto-expiry: prune graveyard entries older than the retention limit
-  await pruneExpiredEntries(settings.graveyardRetentionDays);
 }
 
 function sendAgingUpdate(tabId: number, stage: AgingStage, timeRemainingMs: number): void {
