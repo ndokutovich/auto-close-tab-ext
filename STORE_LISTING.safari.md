@@ -1,21 +1,35 @@
-# Chrome Web Store Listing — Aging Tabs
+# Mac App Store (App Store Connect) Listing — Aging Tabs
 
-Copy-paste ready content for the CWS Developer Console submission.
+Auto-generated from `store-listing/copy.*.json`. Edit the source — re-run `npm run gen:store`.
+
+**Submission target:** App Store Connect
+
+
+---
+
+# English
 
 ## Basic info
 
 - **Name:** Aging Tabs
 - **Category:** Productivity
 - **Language:** English
-- **Visibility:** Public
+- **Subtitle** (23/30): Auto-close tabs, gently
+- **Copyright:** © 2026 Nikita Dokutovich
 
-## Short description (≤132 chars)
+## Promotional text (157/170 chars)
 
-> Auto-close inactive tabs with visual aging feedback. Favicons fade, titles warn, and a graveyard lets you restore anything.
+> Tabs fade before they close, a graveyard lets you bring any back. Global pause, per-tab lock, idle-aware timers, privacy-first — no data leaves your browser.
 
-(128 characters)
 
-## Detailed description
+## Keywords (61/100 chars)
+
+```
+tabs,productivity,auto close,tab manager,focus,memory,session
+```
+
+
+## Full description (2674/4000 chars)
 
 ```
 Aging Tabs auto-closes inactive tabs — but instead of ripping them away without warning, it fades them out so you can see it coming and a searchable graveyard lets you bring anything back with one click.
@@ -60,7 +74,7 @@ CUSTOMIZE EVERYTHING
 • Title prefix: on/off
 • Close warning blink: on/off
 • Close empty tabs (about:blank, new tab pages)
-• Protect tab groups (Chrome / Firefox 138+)
+• Protect tab groups
 • Domain whitelist
 • Browser notifications with click-to-restore
 
@@ -84,108 +98,41 @@ LANGUAGES
 English, Русский
 ```
 
-## Single purpose
 
-> Auto-close inactive browser tabs with progressive visual aging feedback and a restoreable graveyard.
+## URLs
 
-## Permission justifications
-
-Copy these into the "Privacy practices" form in the Developer Console, one per permission.
-
-**tabs**
-> Read tab metadata (last access time, pinned state, audible state, URL, title) to detect inactivity and apply per-tab protection rules. No tab content is accessed; only metadata visible via chrome.tabs.
-
-**alarms**
-> Schedule periodic aging checks so the service worker wakes up on schedule to evaluate and close inactive tabs. Required for MV3 background scheduling.
-
-**storage**
-> Persist tab activity timestamps, user settings, and the graveyard locally in browser.storage.local. All data stays on the user's device.
-
-**scripting**
-> Inject a small content script that applies the visual aging effects (favicon dimming, title prefix, blink warning) to tabs the user has opened.
-
-**notifications**
-> Show a local browser notification when a tab is auto-closed so the user can restore it with a click. Notifications are local only; no remote push service is used.
-
-**idle**
-> Detect when the user becomes idle or locks the screen, so aging timers pause while the user is away and resume on return. Without this, tabs would age during lunch breaks or overnight.
-
-**contextMenus**
-> Add a "Lock tab" entry to the browser right-click menu, so the user can protect individual tabs from auto-close without pinning them.
-
-**host_permissions: <all_urls>**
-> The content script that renders the visual aging feedback (favicon dim, title prefix, blink warning) must run on every tab the user opens, since we cannot predict in advance which tabs the user will want feedback on. The script reads no page content and makes no network requests — it only updates the tab's favicon and title via the DOM. No data is ever transmitted off-device.
-
-## Data usage disclosure
-
-- ☑ Does not collect personally identifiable information
-- ☑ Does not collect health information
-- ☑ Does not collect financial/payment information
-- ☑ Does not collect authentication information
-- ☑ Does not collect personal communications
-- ☑ Does not collect location
-- ☑ Does not collect web history
-- ☑ Does not collect user activity
-- ☑ Does not collect website content
-
-Certify:
-- ☑ I do not sell or transfer user data to third parties, except in the approved use cases
-- ☑ I do not use or transfer user data for purposes that are unrelated to my item's single purpose
-- ☑ I do not use or transfer user data to determine creditworthiness or for lending purposes
-
-## Privacy policy URL
-
-```
-https://github.com/ndokutovich/auto-close-tab-ext/blob/main/PRIVACY_POLICY.md
-```
-
-## Support / Homepage URLs
-
+- **Privacy policy:** https://github.com/ndokutovich/auto-close-tab-ext/blob/main/PRIVACY_POLICY.md
 - **Homepage:** https://github.com/ndokutovich/auto-close-tab-ext
 - **Support:** https://github.com/ndokutovich/auto-close-tab-ext/issues
+- **Marketing:** https://github.com/ndokutovich/auto-close-tab-ext
 
-## Screenshots to upload
 
-All at 1280×800, generated via `node scripts/screenshot-store.mjs`:
-
-1. `screenshots/store/01-popup-dark.png` — popup, dark mode, graveyard populated
-2. `screenshots/store/02-popup-light.png` — popup, light mode
-3. `screenshots/store/03-popup-sorted-domain.png` — popup sorted by domain
-4. `screenshots/store/04-popup-search.png` — popup with active search filter
-5. `screenshots/store/05-popup-paused.png` — global pause feature
-6. `screenshots/store/06-options-dark.png` — settings page, dark mode
-7. `screenshots/store/07-options-light.png` — settings page, light mode
-
-## Store icon
-
-`src/icons/icon-128.png` — 128×128 PNG.
-
-## Promo images
-
-Generated via `node scripts/promo-tile.mjs`:
-
-- `screenshots/store/promo/promo-440x280.png` — Small promo tile (440×280, required for featured placement)
-- `screenshots/store/promo/promo-1400x560.png` — Marquee promo tile (1400×560, shown on discovery/featured pages)
-
-## Zip to upload
-
-`dist/aging-tabs-chrome.zip` — produced by `npm run build && npm run package:chrome`.
 
 ---
 
-# Russian localization (ru)
+# Русский
 
-Chrome Web Store supports per-language store listings. To add Russian:
-Developer Console → Store listing → Languages → + Add → Russian.
-Then paste the texts below.
+## Basic info
 
-## Краткое описание (≤132 символа)
+- **Name:** Aging Tabs
+- **Category:** Продуктивность
+- **Language:** Русский
+- **Subtitle** (27/30): Мягкое автозакрытие вкладок
+- **Copyright:** © 2026 Никита Докутович
 
-> Автозакрытие неактивных вкладок с визуальным затуханием. Фавиконы тускнеют, а закрытые вкладки попадают в «кладбище» для восстановления.
+## Promotional text (161/170 chars)
 
-(131 символ)
+> Вкладки плавно тускнеют перед закрытием, а «кладбище» вернёт любую обратно. Глобальная пауза, блокировка, учёт простоя, приватность — данные не покидают браузер.
 
-## Подробное описание
+
+## Keywords (72/100 chars)
+
+```
+вкладки,продуктивность,автозакрытие,менеджер вкладок,фокус,память,сессия
+```
+
+
+## Full description (3079/4000 chars)
 
 ```
 Aging Tabs автоматически закрывает неактивные вкладки — но не грубо, без предупреждения, а плавно: вкладки визуально блёкнут, и вы видите, что время на исходе. Все закрытые вкладки попадают в поисковое «кладбище», откуда любую можно вернуть в один клик.
@@ -230,7 +177,7 @@ Aging Tabs автоматически закрывает неактивные в
 • Префикс заголовка: вкл/выкл
 • Мигание перед закрытием: вкл/выкл
 • Закрытие пустых вкладок (about:blank, новые вкладки)
-• Защита групп вкладок (Chrome / Firefox 138+)
+• Защита групп вкладок
 • Белый список доменов
 • Браузерные уведомления с кликом для восстановления
 
@@ -254,33 +201,40 @@ Aging Tabs автоматически закрывает неактивные в
 English, Русский
 ```
 
-## Единственное назначение
 
-> Автоматическое закрытие неактивных вкладок браузера с прогрессивной визуальной обратной связью и кладбищем для восстановления.
+## URLs
 
-## Обоснования разрешений (для формы Privacy practices)
+- **Privacy policy:** https://github.com/ndokutovich/auto-close-tab-ext/blob/main/PRIVACY_POLICY.md
+- **Homepage:** https://github.com/ndokutovich/auto-close-tab-ext
+- **Support:** https://github.com/ndokutovich/auto-close-tab-ext/issues
+- **Marketing:** https://github.com/ndokutovich/auto-close-tab-ext
 
-**tabs**
-> Чтение метаданных вкладок (время последнего доступа, закреплённость, воспроизведение звука, URL, заголовок) для определения неактивности и применения правил защиты. Содержимое страниц не читается — только метаданные, доступные через chrome.tabs.
 
-**alarms**
-> Планирование периодических проверок старения, чтобы service worker просыпался по расписанию и обрабатывал неактивные вкладки. Требуется для фонового планирования в MV3.
 
-**storage**
-> Локальное сохранение меток времени активности вкладок, пользовательских настроек и кладбища в browser.storage.local. Все данные остаются на устройстве пользователя.
+---
 
-**scripting**
-> Внедрение небольшого content script, применяющего визуальные эффекты старения (затухание фавикона, префикс заголовка, мигание перед закрытием) на открытых пользователем вкладках.
 
-**notifications**
-> Показ локального браузерного уведомления при автозакрытии вкладки, чтобы пользователь мог восстановить её в один клик. Уведомления только локальные, никакие push-сервисы не используются.
+## Screenshots
 
-**idle**
-> Определение простоя или блокировки экрана, чтобы таймеры старения приостанавливались, когда пользователь отошёл, и возобновлялись при возвращении. Без этого вкладки старели бы во время обеда или ночью.
 
-**contextMenus**
-> Добавление пункта «Заблокировать вкладку» в контекстное меню браузера, чтобы защищать отдельные вкладки от автозакрытия без закрепления.
+All at 1280×800, generated via `node scripts/screenshot-store.mjs`.
 
-**host_permissions: <all_urls>**
-> Content script, рисующий визуальное старение (затухание фавикона, префикс заголовка, мигание), должен работать на каждой открытой вкладке, так как невозможно заранее предсказать, для каких вкладок пользователь захочет видеть обратную связь. Скрипт не читает содержимое страниц и не делает сетевых запросов — он только обновляет фавикон и заголовок вкладки через DOM. Никакие данные никогда не передаются за пределы устройства.
+1. `screenshots/store/01-popup-dark.png` — Popup — dark mode, graveyard populated
+2. `screenshots/store/02-popup-light.png` — Popup — light mode
+3. `screenshots/store/03-popup-sorted-domain.png` — Popup — sorted by domain
+4. `screenshots/store/04-popup-search.png` — Popup — active search filter
+5. `screenshots/store/05-popup-paused.png` — Popup — global pause
+6. `screenshots/store/06-options-dark.png` — Settings — dark mode
+7. `screenshots/store/07-options-light.png` — Settings — light mode
+
+**Icon:** 1024x1024
+
+## Platform notes
+
+- Screenshots: 1280×800 minimum for Mac; existing store screenshots work.
+- Upload 1024×1024 PNG icon separately in App Store Connect (Xcode icon is for the app bundle).
+- Fill App Review Information (demo account not needed — extension works without login).
+- Export compliance: declare 'does not use encryption' or 'uses exempt encryption' (HTTPS only).
+- Age rating: 4+ (no objectionable content).
+- Click 'Submit for Review' after all metadata — Transporter upload alone is not enough.
 

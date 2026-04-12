@@ -1,0 +1,37 @@
+{
+  "name": "Aging Tabs",
+  "tagline": "Auto-close inactive tabs with visual aging feedback. Favicons fade, titles warn, and a graveyard lets you restore anything.",
+  "subtitle": "Auto-close tabs, gently",
+  "shortDescription": "Auto-close inactive tabs with visual aging feedback. Favicons fade, titles warn, and a graveyard lets you restore anything.",
+  "promotionalText": "Tabs fade before they close, a graveyard lets you bring any back. Global pause, per-tab lock, idle-aware timers, privacy-first — no data leaves your browser.",
+  "keywords": "tabs,productivity,auto close,tab manager,focus,memory,session",
+  "singlePurpose": "Auto-close inactive browser tabs with progressive visual aging feedback and a restoreable graveyard.",
+  "category": "Productivity",
+  "copyright": "© 2026 Nikita Dokutovich",
+  "fullDescription": "Aging Tabs auto-closes inactive tabs — but instead of ripping them away without warning, it fades them out so you can see it coming and a searchable graveyard lets you bring anything back with one click.\n\nInspired by the original Aging Tabs (Dao Gottwald, ~2008) that died with Firefox 57. Rebuilt from scratch for Manifest V3, with modern features and zero external services.\n\n━━━━━━━━━━━━━━━━━━━━━━━\nWHAT IT DOES\n━━━━━━━━━━━━━━━━━━━━━━━\n\n• Visual aging — favicons progressively desaturate across 5 stages (0% → 100% grayscale) as tabs sit untouched. Optional emoji title prefix (⏳ 💤 👻 ⚠️) makes the timer visible at a glance.\n\n• Auto-close with a safety net — tabs inactive beyond the configured timeout (default 30 min) are closed. Every closed tab is saved to a searchable graveyard with one-click restore.\n\n• Smart immunity — active, pinned, locked, audible, grouped, and whitelisted tabs are always protected. Minimum-tab-count floor prevents closing when you only have a few tabs open.\n\n• Global pause — click the pause button in the popup to freeze all aging timers while you work intensively with a set of tabs. Resume continues exactly where you left off, locked tabs stay locked.\n\n• Idle-aware — aging pauses automatically when you're away from the computer and resumes when you return.\n\n• Lock individual tabs — right-click any tab or press Alt+L to lock it. Locked tabs are excluded from auto-close until you unlock.\n\n━━━━━━━━━━━━━━━━━━━━━━━\nTHE GRAVEYARD\n━━━━━━━━━━━━━━━━━━━━━━━\n\nEvery auto-closed tab is saved to a local graveyard:\n• Instant text search across title, URL, domain\n• Sort by recent, by domain, or A-Z\n• One-click restore\n• JSON export/import for backup\n• Capped history (configurable) — set to 0 for unlimited\n\n━━━━━━━━━━━━━━━━━━━━━━━\nCUSTOMIZE EVERYTHING\n━━━━━━━━━━━━━━━━━━━━━━━\n\n• Timeout: any duration in minutes\n• Minimum tab count: floor below which nothing closes\n• Action on expire: close or discard (unload from memory without closing)\n• Favicon dimming: on/off\n• Title prefix: on/off\n• Close warning blink: on/off\n• Close empty tabs (about:blank, new tab pages)\n• Protect tab groups\n• Domain whitelist\n• Browser notifications with click-to-restore\n\n━━━━━━━━━━━━━━━━━━━━━━━\nPRIVACY FIRST\n━━━━━━━━━━━━━━━━━━━━━━━\n\n• No data leaves your browser\n• No analytics, no telemetry, no remote servers\n• No account required\n• All state lives in browser.storage.local\n• Open source (MIT) — audit the code yourself\n\nPrivacy policy: https://github.com/ndokutovich/auto-close-tab-ext/blob/main/PRIVACY_POLICY.md\nSource code: https://github.com/ndokutovich/auto-close-tab-ext\n\n━━━━━━━━━━━━━━━━━━━━━━━\nLANGUAGES\n━━━━━━━━━━━━━━━━━━━━━━━\n\nEnglish, Русский",
+  "urls": {
+    "privacy": "https://github.com/ndokutovich/auto-close-tab-ext/blob/main/PRIVACY_POLICY.md",
+    "homepage": "https://github.com/ndokutovich/auto-close-tab-ext",
+    "support": "https://github.com/ndokutovich/auto-close-tab-ext/issues",
+    "marketing": "https://github.com/ndokutovich/auto-close-tab-ext"
+  },
+  "permissions": {
+    "tabs": "Read tab metadata (last access time, pinned state, audible state, URL, title) to detect inactivity and apply per-tab protection rules. No tab content is accessed; only metadata visible via chrome.tabs.",
+    "alarms": "Schedule periodic aging checks so the service worker wakes up on schedule to evaluate and close inactive tabs. Required for MV3 background scheduling.",
+    "storage": "Persist tab activity timestamps, user settings, and the graveyard locally in browser.storage.local. All data stays on the user's device.",
+    "scripting": "Inject a small content script that applies the visual aging effects (favicon dimming, title prefix, blink warning) to tabs the user has opened.",
+    "notifications": "Show a local browser notification when a tab is auto-closed so the user can restore it with a click. Notifications are local only; no remote push service is used.",
+    "idle": "Detect when the user becomes idle or locks the screen, so aging timers pause while the user is away and resume on return. Without this, tabs would age during lunch breaks or overnight.",
+    "contextMenus": "Add a \"Lock tab\" entry to the browser right-click menu, so the user can protect individual tabs from auto-close without pinning them.",
+    "host_permissions:<all_urls>": "The content script that renders the visual aging feedback (favicon dim, title prefix, blink warning) must run on every tab the user opens, since we cannot predict in advance which tabs the user will want feedback on. The script reads no page content and makes no network requests — it only updates the tab's favicon and title via the DOM. No data is ever transmitted off-device."
+  },
+  "screenshots": [
+    { "file": "01-popup-dark.png", "caption": "Popup — dark mode, graveyard populated" },
+    { "file": "02-popup-light.png", "caption": "Popup — light mode" },
+    { "file": "03-popup-sorted-domain.png", "caption": "Popup — sorted by domain" },
+    { "file": "04-popup-search.png", "caption": "Popup — active search filter" },
+    { "file": "05-popup-paused.png", "caption": "Popup — global pause" },
+    { "file": "06-options-dark.png", "caption": "Settings — dark mode" },
+    { "file": "07-options-light.png", "caption": "Settings — light mode" }
+  ]
+}

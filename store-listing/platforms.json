@@ -1,0 +1,73 @@
+{
+  "chrome": {
+    "storeName": "Chrome Web Store",
+    "consoleName": "CWS Developer Console",
+    "fields": ["name", "category", "shortDescription", "fullDescription", "singlePurpose", "permissions", "dataDisclosure", "urls", "screenshots"],
+    "iconSize": "128x128",
+    "limits": {
+      "shortDescription": 132,
+      "fullDescription": 16000
+    },
+    "zipTarget": "dist/aging-tabs-chrome.zip",
+    "dataDisclosure": {
+      "collectedCategories": [
+        "Personally identifiable information",
+        "Health information",
+        "Financial/payment information",
+        "Authentication information",
+        "Personal communications",
+        "Location",
+        "Web history",
+        "User activity",
+        "Website content"
+      ],
+      "certifications": [
+        "I do not sell or transfer user data to third parties, except in the approved use cases",
+        "I do not use or transfer user data for purposes that are unrelated to my item's single purpose",
+        "I do not use or transfer user data to determine creditworthiness or for lending purposes"
+      ]
+    },
+    "notes": [
+      "Fill Privacy practices form with per-permission justifications.",
+      "All data-collection checkboxes should be UNCHECKED (extension collects nothing).",
+      "Upload promo tiles if you want featured placement."
+    ]
+  },
+  "firefox": {
+    "storeName": "Firefox Add-ons (AMO)",
+    "consoleName": "addons.mozilla.org Developer Hub",
+    "fields": ["name", "category", "shortDescription", "fullDescription", "urls", "screenshots"],
+    "iconSize": "128x128",
+    "limits": {
+      "shortDescription": 250,
+      "fullDescription": 15000
+    },
+    "zipTarget": "dist/aging-tabs-firefox.zip",
+    "notes": [
+      "AMO uses summary (250 chars) instead of short description — the same text works.",
+      "No permission-justification form like Chrome; permissions are shown from manifest.json.",
+      "Source code upload required for review (link to GitHub repo works)."
+    ]
+  },
+  "safari": {
+    "storeName": "Mac App Store (App Store Connect)",
+    "consoleName": "App Store Connect",
+    "fields": ["name", "subtitle", "promotionalText", "fullDescription", "keywords", "copyright", "category", "urls", "screenshots"],
+    "iconSize": "1024x1024",
+    "limits": {
+      "name": 30,
+      "subtitle": 30,
+      "promotionalText": 170,
+      "keywords": 100,
+      "fullDescription": 4000
+    },
+    "notes": [
+      "Screenshots: 1280×800 minimum for Mac; existing store screenshots work.",
+      "Upload 1024×1024 PNG icon separately in App Store Connect (Xcode icon is for the app bundle).",
+      "Fill App Review Information (demo account not needed — extension works without login).",
+      "Export compliance: declare 'does not use encryption' or 'uses exempt encryption' (HTTPS only).",
+      "Age rating: 4+ (no objectionable content).",
+      "Click 'Submit for Review' after all metadata — Transporter upload alone is not enough."
+    ]
+  }
+}
