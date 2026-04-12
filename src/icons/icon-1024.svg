@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#dbeafe"/>
+      <stop offset="100%" stop-color="#f4f4f5"/>
+    </linearGradient>
+    <linearGradient id="aging" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#71717a"/>
+    </linearGradient>
+  </defs>
+  <!-- Opaque background — App Store rejects transparent app icons.
+       Apple applies its own rounded corners on top, so full-bleed is fine. -->
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <!-- Artwork fits within 768x768 centered zone (128px padding on all sides),
+       scaled 8x from the 128px icon composition. -->
+  <!-- Tab handle -->
+  <rect x="128" y="176" width="368" height="176" rx="56" fill="url(#aging)"/>
+  <!-- Browser window body -->
+  <rect x="128" y="288" width="768" height="560" rx="72" fill="url(#aging)" opacity="0.9"/>
+</svg>

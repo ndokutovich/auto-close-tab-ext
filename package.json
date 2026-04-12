@@ -17,6 +17,7 @@
     "package": "node scripts/pack.mjs",
     "sync:safari": "node scripts/sync-safari-version.mjs",
     "gen:store": "node scripts/gen-store-listings.mjs",
+    "gen:appstore-icon": "node scripts/icon-appstore.mjs",
     "test": "vitest run --exclude 'scenarios/**'",
     "test:watch": "vitest"
   },
