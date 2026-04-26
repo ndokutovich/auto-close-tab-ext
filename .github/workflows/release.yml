@@ -42,7 +42,7 @@ jobs:
       - name: Install web-ext
         run: npm install -g web-ext
 
-      - name: Sign and upload to AMO
+      - name: Sign and upload to AMO (Firefox)
         continue-on-error: true
         env:
           WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
@@ -52,3 +52,19 @@ jobs:
             --source-dir dist/firefox \
             --channel listed \
             --artifacts-dir dist
+
+      - name: Upload to Chrome Web Store
+        continue-on-error: true
+        env:
+          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+          CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+        run: |
+          npx --yes chrome-webstore-upload-cli@3 upload \
+            --source dist/aging-tabs-chrome.zip \
+            --extension-id "$CWS_EXTENSION_ID" \
+            --client-id "$CWS_CLIENT_ID" \
+            --client-secret "$CWS_CLIENT_SECRET" \
+            --refresh-token "$CWS_REFRESH_TOKEN" \
+            --auto-publish
