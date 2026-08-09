@@ -3,6 +3,11 @@ name: Release
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to publish or re-publish, e.g. v1.3.0'
+        required: true
 
 permissions:
   contents: write
@@ -10,8 +15,12 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      TAG_NAME: ${{ inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -28,20 +37,32 @@ jobs:
       - name: Package Firefox zip
         run: cd dist/firefox && zip -r ../aging-tabs-firefox.zip .
 
-      - name: Create GitHub Release
+      # Idempotent so a store upload can be retried without deleting the tag:
+      # on a re-run the release already exists and only its assets are replaced.
+      - name: Create or update GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG_NAME: ${{ github.ref_name }}
         run: |
-          gh release create "$TAG_NAME" \
-            --title "Aging Tabs $TAG_NAME" \
-            --generate-notes \
-            dist/aging-tabs-chrome.zip \
-            dist/aging-tabs-firefox.zip
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            gh release upload "$TAG_NAME" \
+              dist/aging-tabs-chrome.zip \
+              dist/aging-tabs-firefox.zip \
+              --clobber
+          else
+            gh release create "$TAG_NAME" \
+              --title "Aging Tabs $TAG_NAME" \
+              --generate-notes \
+              dist/aging-tabs-chrome.zip \
+              dist/aging-tabs-firefox.zip
+          fi
 
       - name: Install web-ext
         run: npm install -g web-ext
 
+      # Tolerated: AMO refuses a version it has already signed, so re-publishing
+      # the same tag is expected to fail here. Chrome has no such restriction,
+      # which is why the step below is NOT tolerated — a silent failure there
+      # let two releases report success while the store stayed on the old build.
       - name: Sign and upload to AMO (Firefox)
         continue-on-error: true
         env:
@@ -54,7 +75,6 @@ jobs:
             --artifacts-dir dist
 
       - name: Upload to Chrome Web Store
-        continue-on-error: true
         env:
           CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
           CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
