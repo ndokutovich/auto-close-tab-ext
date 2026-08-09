@@ -578,19 +578,41 @@ scenario('Settings bounds enforcement', async () => {
   const valueLow = await options.inputValue('#timeout');
   if (valueLow !== '1') throw new Error(`Expected timeout "1" for input -5, got "${valueLow}"`);
 
-  // Test upper bound via message API: send timeoutMinutes=9999, backend clamps to 1440
+  // Test upper bound via message API: send timeoutMinutes=99999, backend clamps to 43200 (30 days)
   await options.evaluate(async () => {
     try {
       await browser.runtime.sendMessage({
         type: 'SAVE_SETTINGS',
-        settings: { timeoutMinutes: 9999 },
+        settings: { timeoutMinutes: 99999 },
       });
     } catch (e) { /* ignore */ }
   });
   await options.reload();
   await options.waitForTimeout(500);
   const valueHigh = await options.inputValue('#timeout');
-  if (valueHigh !== '1440') throw new Error(`Expected timeout "1440" for input 9999, got "${valueHigh}"`);
+  if (valueHigh !== '43200') throw new Error(`Expected timeout "43200" for input 99999, got "${valueHigh}"`);
+
+  // A month-long timeout must survive intact — the old 1440 cap silently ate it (issue #1)
+  await options.evaluate(async () => {
+    try {
+      await browser.runtime.sendMessage({
+        type: 'SAVE_SETTINGS',
+        settings: { timeoutMinutes: 43200 },
+      });
+    } catch (e) { /* ignore */ }
+  });
+  await options.reload();
+  await options.waitForTimeout(500);
+  const valueMonth = await options.inputValue('#timeout');
+  if (valueMonth !== '43200') throw new Error(`Expected timeout "43200" to persist, got "${valueMonth}"`);
+
+  // The form must show what was actually stored, not what was typed —
+  // "Saved" previously confirmed a value the backend had clamped away.
+  await options.fill('#timeout', '99999');
+  await options.click('#btn-save');
+  await options.waitForTimeout(500);
+  const valueReflected = await options.inputValue('#timeout');
+  if (valueReflected !== '43200') throw new Error(`Expected form to reflect clamped "43200", got "${valueReflected}"`);
 
   // Restore default
   await options.evaluate(async () => {

@@ -2,9 +2,13 @@ import browser from 'webextension-polyfill';
 import type { AgingStage } from '../shared/types';
 import {
   getTabTimes, setTabTimes, getTabStages, setTabStages, unlockTab,
-  getPausedSince, setPausedSince, getLockedTabs, setLockedTabs,
+  getPausedSince, setPausedSince, getLockedTabs, setLockedTabs, getLastTickAt,
 } from '../shared/storage';
 import { shiftTabTimes } from '../shared/pure';
+import {
+  STORAGE_KEYS, SESSION_MARKER_KEY, IDLE_DETECTION_SECONDS,
+  DOWNTIME_THRESHOLD_MS, MAX_TIME_SHIFT_MS,
+} from '../shared/constants';
 import { clearCachedTitle } from './timer-manager';
 
 // In-memory cache, flushed to storage when dirty
@@ -36,10 +40,14 @@ export async function initTracker(freshInstall = false): Promise<void> {
   tabTimes = await getTabTimes();
   tabStages = await getTabStages();
 
-  const idleRes = await browser.storage.local.get('idleSince');
+  const idleRes = await browser.storage.local.get(STORAGE_KEYS.IDLE_SINCE);
   idleSince = typeof idleRes.idleSince === 'number' ? idleRes.idleSince : null;
 
   pausedSince = await getPausedSince();
+
+  // Give back the time the tabs were not actually being neglected, before any
+  // of it can be charged against them.
+  await compensateInactiveTime(Date.now());
 
   // Reconcile with currently open tabs
   const tabs = await browser.tabs.query({});
@@ -93,6 +101,99 @@ export function isLoaded(): boolean {
   return initialized;
 }
 
+// --- Inactive-time compensation ---
+
+/**
+ * Shift every tracked tab forward by `spanMs`, i.e. hand back time that was
+ * never active browsing. shiftTabTimes clamps each tab to `now`, so an
+ * over-large span can only make tabs look freshly accessed — never stale.
+ */
+function applyShift(spanMs: number, now: number): void {
+  const shift = Math.max(0, Math.min(spanMs, MAX_TIME_SHIFT_MS));
+  if (shift === 0) return;
+  shiftTabTimes(tabTimes, shift, now);
+  dirty = true;
+}
+
+/**
+ * True when this is the first service worker of a new browser session.
+ *
+ * `storage.session` lives and dies with the browser profile, so an absent
+ * marker means the browser itself restarted — as opposed to the service worker
+ * merely being recycled, which MV3 does every ~30 seconds of inactivity.
+ * Without this distinction a throttled alarm would look identical to downtime
+ * and hand back time to tabs in a browser that never closed.
+ *
+ * If the API is unavailable the heartbeat threshold alone decides.
+ */
+async function consumeBrowserSessionMarker(): Promise<boolean> {
+  try {
+    const session = browser.storage.session;
+    if (!session) return true;
+    const existing = await session.get(SESSION_MARKER_KEY);
+    await session.set({ [SESSION_MARKER_KEY]: true });
+    return existing?.[SESSION_MARKER_KEY] !== true;
+  } catch {
+    return true;
+  }
+}
+
+async function isSystemIdle(): Promise<boolean> {
+  try {
+    if (!browser.idle?.queryState) return false;
+    return (await browser.idle.queryState(IDLE_DETECTION_SECONDS)) !== 'active';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Aging measures active browsing time, not wall-clock time. Two spans that
+ * elapse before startup are not active time and must be given back:
+ *
+ *   - a pending idle span — the OS was idle/locked when the browser last ran
+ *   - browser downtime — the gap since the last heartbeat, i.e. the browser
+ *     was not running at all
+ *
+ * The spans nest rather than add up: a pause covers everything inside it, and
+ * an idle span left open at shutdown already covers the downtime that followed.
+ * Applying more than one would shift twice, so the widest pending span wins and
+ * the narrower ones stand down.
+ */
+async function compensateInactiveTime(now: number): Promise<void> {
+  // Always consume the marker, even on paths that shift nothing — leaving it
+  // unset would make the next service-worker recycle look like a restart.
+  const browserRestarted = await consumeBrowserSessionMarker();
+
+  // Pause settles its own span on unpause, downtime inside it included.
+  if (pausedSince !== null) return;
+
+  if (idleSince !== null) {
+    applyShift(now - idleSince, now);
+    // Consume the marker. The idle handler only arms it when null, so leaving a
+    // stale one behind would make the next idle -> active transition shift by
+    // the entire working period since startup on top of the real idle span.
+    // Re-arm at `now` if the OS is still idle, so the ongoing span is not lost.
+    idleSince = (await isSystemIdle()) ? now : null;
+    if (idleSince === null) {
+      await browser.storage.local.remove(STORAGE_KEYS.IDLE_SINCE);
+    } else {
+      await browser.storage.local.set({ [STORAGE_KEYS.IDLE_SINCE]: idleSince });
+    }
+    return;
+  }
+
+  // Only a genuine browser restart can have produced downtime. A recycled
+  // service worker inside a live browser has not missed any real time.
+  if (!browserRestarted) return;
+
+  const lastTick = await getLastTickAt();
+  if (lastTick === null) return; // no heartbeat yet — first run after upgrade
+  const downtime = now - lastTick;
+  if (downtime < DOWNTIME_THRESHOLD_MS) return; // shut down and reopened at once
+  applyShift(downtime, now);
+}
+
 // --- Pause API ---
 
 export function isPaused(): boolean {
@@ -124,7 +225,7 @@ export function setPause(paused: boolean): Promise<void> {
     } else {
       if (pausedSince === null) return; // already running
       const now = Date.now();
-      const shiftMs = Math.max(0, now - pausedSince);
+      const shiftMs = now - pausedSince;
       // Atomic sync block: update ALL in-memory state before any await.
       // Clearing both synchronously guarantees handlers see either "paused"
       // (early return) or "running with no pending idle" (no-op).
@@ -133,8 +234,7 @@ export function setPause(paused: boolean): Promise<void> {
       // unpause button requires mouse movement, so the OS is guaranteed active
       // at this moment. A stale idleSince would otherwise break the next
       // idle→active compensation.
-      shiftTabTimes(tabTimes, shiftMs, now);
-      dirty = true;
+      applyShift(shiftMs, now);
       const hadStaleIdle = idleSince !== null;
       pausedSince = null;
       idleSince = null;
@@ -142,7 +242,7 @@ export function setPause(paused: boolean): Promise<void> {
       await setPausedSince(null);
       await flush();
       if (hadStaleIdle) {
-        await browser.storage.local.remove('idleSince');
+        await browser.storage.local.remove(STORAGE_KEYS.IDLE_SINCE);
       }
     }
   });
@@ -239,7 +339,7 @@ export function setupTabListeners(): void {
   try {
     if (!browser.idle?.onStateChanged) return;
 
-    browser.idle.setDetectionInterval(60);
+    browser.idle.setDetectionInterval(IDLE_DETECTION_SECONDS);
 
     // idleOpChain is module-level — shared with setPause to serialize all
     // operations that touch tabTimes/idleSince/pausedSince.
@@ -253,19 +353,19 @@ export function setupTabListeners(): void {
 
         if (state === 'active') {
           if (idleSince !== null) {
-            const MAX_IDLE_SHIFT = 24 * 60 * 60 * 1000;
             const now = Date.now();
-            const idleDuration = Math.max(0, Math.min(now - idleSince, MAX_IDLE_SHIFT));
-            shiftTabTimes(tabTimes, idleDuration, now);
-            dirty = true;
+            // Bounded by MAX_TIME_SHIFT_MS, not by a day: a machine left alone
+            // for a week is idle for a week, and truncating the shift would
+            // charge the remainder to the tabs (issue #1).
+            applyShift(now - idleSince, now);
             idleSince = null;
-            await browser.storage.local.remove('idleSince');
+            await browser.storage.local.remove(STORAGE_KEYS.IDLE_SINCE);
             await flush();
           }
         } else {
           if (idleSince === null) {
             idleSince = Date.now();
-            await browser.storage.local.set({ idleSince });
+            await browser.storage.local.set({ [STORAGE_KEYS.IDLE_SINCE]: idleSince });
           }
         }
       }).catch((err) => {

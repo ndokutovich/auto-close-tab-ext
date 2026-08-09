@@ -38,7 +38,7 @@ When a tab closes, you get a notification. Click it to instantly restore the tab
 Don't want to close tabs? Switch to discard mode — tabs stay visible but unload from memory.
 
 **Configurable**
-- Timeout: 1 minute to 24 hours
+- Timeout: 1 minute to 30 days
 - Favicon dimming on/off
 - Title prefix indicators on/off
 - Domain whitelist

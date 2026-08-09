@@ -3,7 +3,7 @@ import type { AgingStage, BgToContentMsg } from '../shared/types';
 import { ALARM_NAME, CHECK_INTERVAL_SECONDS } from '../shared/constants';
 import { computeAgingStage, extractDomain, stripAgingPrefix } from '../shared/pure';
 import { msg } from '../shared/i18n';
-import { getSettings, getGraveyard, getLockedTabs } from '../shared/storage';
+import { getSettings, getGraveyard, getLockedTabs, setLastTickAt } from '../shared/storage';
 import {
   ensureReady,
   getAllTrackedTabIds,
@@ -72,6 +72,11 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
   }
 
   if (alarm.name !== ALARM_NAME) return;
+
+  // Heartbeat for browser-downtime detection. Written before any gating —
+  // a paused or idle browser is still a *running* browser, and the next
+  // startup needs an accurate mark of when we were last alive.
+  await setLastTickAt(Date.now());
 
   await ensureReady();
 

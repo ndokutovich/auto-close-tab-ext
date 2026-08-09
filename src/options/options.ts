@@ -27,9 +27,7 @@ const btnWelcomeDismiss = document.getElementById('btn-welcome-dismiss')!;
 const btnSave = document.getElementById('btn-save')!;
 const saveStatusEl = document.getElementById('save-status')!;
 
-async function loadSettings(): Promise<void> {
-  const settings: Settings = await browser.runtime.sendMessage({ type: 'GET_SETTINGS' });
-
+function applySettingsToForm(settings: Settings): void {
   timeoutInput.value = String(settings.timeoutMinutes);
   minTabsInput.value = String(settings.minTabCount);
   expireActionSelect.value = settings.expireAction;
@@ -41,6 +39,10 @@ async function loadSettings(): Promise<void> {
   graveyardSizeInput.value = String(settings.graveyardMaxSize);
   graveyardRetentionSelect.value = String(settings.graveyardRetentionDays);
   historySyncToggle.checked = settings.historySyncEnabled;
+}
+
+async function loadSettings(): Promise<void> {
+  applySettingsToForm(await browser.runtime.sendMessage({ type: 'GET_SETTINGS' }));
 }
 
 async function saveSettings(): Promise<void> {
@@ -64,7 +66,11 @@ async function saveSettings(): Promise<void> {
     historySyncEnabled: historySyncToggle.checked,
   };
 
-  await browser.runtime.sendMessage({ type: 'SAVE_SETTINGS', settings });
+  // SAVE_SETTINGS returns what was actually stored after bounds enforcement.
+  // Reflect it back into the form, otherwise "Saved" confirms a value the
+  // backend silently clamped and the user never learns their input was capped.
+  const stored: Settings = await browser.runtime.sendMessage({ type: 'SAVE_SETTINGS', settings });
+  if (stored && typeof stored.timeoutMinutes === 'number') applySettingsToForm(stored);
 
   saveStatusEl.textContent = msg('statusSaved');
   setTimeout(() => { saveStatusEl.textContent = ''; }, 2000);

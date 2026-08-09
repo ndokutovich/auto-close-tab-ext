@@ -1,6 +1,6 @@
 import browser from 'webextension-polyfill';
 import type { Settings, GraveyardEntry, AgingStage } from './types';
-import { DEFAULT_SETTINGS, STORAGE_KEYS } from './constants';
+import { DEFAULT_SETTINGS, STORAGE_KEYS, MIN_TIMEOUT_MINUTES, MAX_TIMEOUT_MINUTES } from './constants';
 import { capGraveyard } from './pure';
 
 // --- Settings ---
@@ -22,7 +22,7 @@ export async function saveSettings(partial: Partial<Settings>): Promise<Settings
   // Enforce bounds to prevent abuse via crafted messages
   const updated: Settings = {
     ...merged,
-    timeoutMinutes: Math.max(1, Math.min(1440, Number(merged.timeoutMinutes) || current.timeoutMinutes)),
+    timeoutMinutes: Math.max(MIN_TIMEOUT_MINUTES, Math.min(MAX_TIMEOUT_MINUTES, Number(merged.timeoutMinutes) || current.timeoutMinutes)),
     minTabCount: Math.max(0, Math.min(100, Number(merged.minTabCount) ?? current.minTabCount)),
     graveyardMaxSize: Math.max(0, Math.min(10000, Number(merged.graveyardMaxSize) ?? current.graveyardMaxSize)),
     graveyardRetentionDays: Math.max(0, Math.min(365, Number(merged.graveyardRetentionDays) || 0)),
@@ -124,6 +124,25 @@ export async function setPausedSince(value: number | null): Promise<void> {
   } else {
     await browser.storage.local.set({ [STORAGE_KEYS.PAUSED_SINCE]: value });
   }
+}
+
+// --- Heartbeat ---
+//
+// Written on every aging alarm tick. The gap between the last heartbeat and
+// startup is time the browser was not running — see compensateInactiveTime.
+
+export async function getLastTickAt(): Promise<number | null> {
+  try {
+    const result = await browser.storage.local.get(STORAGE_KEYS.LAST_TICK_AT);
+    const value = result[STORAGE_KEYS.LAST_TICK_AT];
+    return typeof value === 'number' && Number.isFinite(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function setLastTickAt(value: number): Promise<void> {
+  await browser.storage.local.set({ [STORAGE_KEYS.LAST_TICK_AT]: value });
 }
 
 // --- Locked tabs ---
