@@ -455,29 +455,28 @@ scenario('Restore opens new tab (deterministic)', async () => {
   const items = await popup.$$('.graveyard-item');
   if (items.length === 0) throw new Error('Expected at least 1 graveyard item');
 
-  const pagesBefore = context.pages().length;
-
-  // Click the graveyard item to restore
+  // The popup calls window.close() as soon as the restore message is sent, so
+  // nothing may be awaited on `popup` past this click — it is already gone.
+  // Waiting on the context is also what makes this deterministic: the assertion
+  // is the page event itself, not a page count sampled after a fixed sleep.
+  const newPagePromise = context.waitForEvent('page', { timeout: 10000 });
   await items[0].click();
-  await popup.waitForTimeout(1500);
+  const newTab = await newPagePromise;
 
-  const pagesAfter = context.pages().length;
-  if (pagesAfter <= pagesBefore) {
-    throw new Error(`Expected pages to increase: before=${pagesBefore}, after=${pagesAfter}`);
+  await newTab.waitForLoadState('domcontentloaded').catch(() => { /* offline is fine, the URL is what matters */ });
+  if (!newTab.url().includes('example.com')) {
+    throw new Error(`Expected restored tab at example.com, got "${newTab.url()}"`);
   }
+  await newTab.close();
 
-  // Close the newly opened tab (last one)
-  const pages = context.pages();
-  const newTab = pages.find(p => p.url().includes('example.com'));
-  if (newTab) await newTab.close();
-
-  // Cleanup
-  await popup.evaluate(async () => {
+  // Cleanup from a fresh extension page — the popup closed itself.
+  const cleanup = await openOptions();
+  await cleanup.evaluate(async () => {
     try {
       await browser.runtime.sendMessage({ type: 'CLEAR_GRAVEYARD' });
     } catch (e) { /* ignore */ }
   });
-  await popup.close();
+  await cleanup.close();
 });
 
 scenario('Russian locale', async () => {
