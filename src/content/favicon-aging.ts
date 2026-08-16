@@ -98,6 +98,9 @@ export function handleFaviconAging(stage: AgingStage, _timeRemainingMs: number):
 
 export function resetFavicon(): void {
   generation++; // invalidate any in-flight load/fetch
+  // Forget which URLs were unfetchable so a transient failure (a one-off 503,
+  // a network blip) does not permanently suppress dimming for this page.
+  faviconUnfetchable.clear();
   if (originalFaviconUrl !== null) {
     setFavicon(originalFaviconUrl);
     originalFaviconUrl = null;
@@ -109,8 +112,20 @@ export function resetFavicon(): void {
 // aging through four stages does not re-download the same icon four times.
 // Grayscale is reapplied locally from the cached raw bytes on each stage.
 const rawFaviconCache = new Map<string, string>();
+// A page rarely uses more than a couple of favicon origins; cap so a page that
+// churns favicon URLs cannot retain unbounded ~1 MB entries.
+const RAW_FAVICON_CACHE_MAX = 8;
+function cacheRawFavicon(url: string, dataUrl: string): void {
+  if (rawFaviconCache.size >= RAW_FAVICON_CACHE_MAX) {
+    // Evict the oldest (Map preserves insertion order).
+    const oldest = rawFaviconCache.keys().next().value;
+    if (oldest !== undefined) rawFaviconCache.delete(oldest);
+  }
+  rawFaviconCache.set(url, dataUrl);
+}
 // Source URLs the background could not fetch (dead /favicon.ico guesses, blocked
 // hosts) — remembered so every stage change does not retry a doomed request.
+// Cleared on reset so a transient failure is not remembered forever.
 const faviconUnfetchable = new Set<string>();
 
 /** Redraw a cached/received raw favicon data: URL at the given grayscale. */
@@ -148,7 +163,7 @@ async function requestFaviconViaBackground(
       if (message.type === 'FETCH_FAVICON_RESULT' && message.requestId === requestId) {
         browser.runtime.onMessage.removeListener(handler);
         clearTimeout(timeoutId);
-        rawFaviconCache.set(url, message.dataUrl);
+        cacheRawFavicon(url, message.dataUrl);
         if (gen !== generation) return; // reset/restaged while we waited
         drawFromRaw(message.dataUrl, percentage, gen);
       }

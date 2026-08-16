@@ -188,7 +188,18 @@ async function compensateInactiveTime(now: number): Promise<void> {
   if (!browserRestarted) return;
 
   const lastTick = await getLastTickAt();
-  if (lastTick === null) return; // no heartbeat yet — first run after upgrade
+  if (lastTick === null) {
+    // No heartbeat and a genuine restart: either a fresh install (no tabs
+    // tracked yet — reset is a no-op) or an upgrade from a version without the
+    // heartbeat, carrying stale wall-clock timers. We cannot measure the
+    // downtime, so treat it as a fresh start and reset tracked tabs to now
+    // rather than charge a possibly week-long absence against them.
+    for (const id of Object.keys(tabTimes)) {
+      tabTimes[Number(id)] = now;
+    }
+    dirty = true;
+    return;
+  }
   const downtime = now - lastTick;
   if (downtime < DOWNTIME_THRESHOLD_MS) return; // shut down and reopened at once
   applyShift(downtime, now);

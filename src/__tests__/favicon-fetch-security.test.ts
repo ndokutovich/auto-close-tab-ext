@@ -88,15 +88,72 @@ describe('favicon fetch security', () => {
     setupMessageListener();
   });
 
-  it('refuses a URL that redirects to a private address', async () => {
-    // Initial host is public and passes the pre-check; the final URL is private.
-    globalThis.fetch = vi.fn(async () =>
-      streamingResponse('http://192.168.1.1/camera.jpg', 1000, '1000')
-    ) as any;
+  it('does not follow redirects at all (the request must not reach the target)', async () => {
+    // redirect:'error' means fetch never issues the redirected request, so a
+    // bounce toward an internal endpoint is never sent in the first place.
+    const spy = vi.fn(async (_url: string, init: any) => {
+      if (init?.redirect === 'error') throw new TypeError('redirect');
+      return streamingResponse('http://192.168.1.1/camera.jpg', 1000, '1000');
+    });
+    globalThis.fetch = spy as any;
 
     const res = await callFetch('https://cdn.example.com/redirector');
     expect(res).toEqual({ ok: false });
     expect(sentToTab).toHaveLength(0);
+    expect((spy.mock.calls[0] as any[])[1].redirect).toBe('error');
+  });
+
+  it('rejects IPv6 loopback and unique-local hosts', async () => {
+    globalThis.fetch = vi.fn(async () =>
+      streamingResponse('http://x/', 100, '100')
+    ) as any;
+
+    for (const url of ['http://[::1]/i.png', 'http://[fd00::1]/i.png', 'http://[fc00::1]/i.png']) {
+      const res = await callFetch(url);
+      expect(res).toEqual({ ok: false });
+    }
+    expect(sentToTab).toHaveLength(0);
+  });
+
+  it('rejects .local and bare-hostname (no dot) targets', async () => {
+    globalThis.fetch = vi.fn(async () =>
+      streamingResponse('http://x/', 100, '100')
+    ) as any;
+
+    for (const url of ['http://printer.local/favicon.ico', 'http://router/favicon.ico']) {
+      const res = await callFetch(url);
+      expect(res).toEqual({ ok: false });
+    }
+    expect(sentToTab).toHaveLength(0);
+  });
+
+  it('aborts a fetch that never completes (request deadline)', async () => {
+    vi.useFakeTimers();
+    let signal: AbortSignal | undefined;
+    globalThis.fetch = vi.fn(async (_url: string, init: any) => {
+      signal = init?.signal;
+      return {
+        ok: true,
+        url: 'https://cdn.example.com/slow.png',
+        headers: { get: () => 'image/png' },
+        body: {
+          getReader: () => ({
+            // Never resolves on its own — only the abort signal ends it.
+            read: () => new Promise((_res, rej) => {
+              signal?.addEventListener('abort', () => rej(new Error('aborted')));
+            }),
+            cancel: async () => {},
+          }),
+        },
+      };
+    }) as any;
+
+    const p = callFetch('https://cdn.example.com/slow.png');
+    await vi.advanceTimersByTimeAsync(15000); // past the request deadline
+    const res = await p;
+    expect(res).toEqual({ ok: false });
+    expect(signal).toBeInstanceOf(AbortSignal);
+    vi.useRealTimers();
   });
 
   it('aborts a response that streams past the size cap without Content-Length', async () => {

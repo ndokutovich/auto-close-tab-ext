@@ -168,13 +168,51 @@ describe('browser downtime compensation', () => {
     expect(tracker.getLastAccessed(1)).toBe(touched);
   });
 
-  it('does nothing on first run when no heartbeat was ever written', async () => {
+  it('grace-resets pre-existing timers when there is no heartbeat (upgrade)', async () => {
+    // No heartbeat means we cannot know how long the browser was down. An
+    // upgrade from a version without the heartbeat carries stale wall-clock
+    // timers; charging them could close everything on the first launch. With no
+    // evidence, treat the restart as a fresh start and reset to now.
+    seedTab(1, 30 * DAY);
+
+    const tracker = await loadTracker(1);
+    await tracker.initTracker();
+
+    const elapsed = Date.now() - tracker.getLastAccessed(1)!;
+    expect(elapsed).toBeLessThan(1000);
+  });
+
+  it('does not grace-reset a mere service-worker recycle with no heartbeat', async () => {
+    // Same "no heartbeat" state, but the session marker proves the browser
+    // never closed — so there is nothing to compensate and no reset.
     const touched = seedTab(1, 10 * MINUTE);
+    sessionStore['swSessionAlive'] = true;
 
     const tracker = await loadTracker(1);
     await tracker.initTracker();
 
     expect(tracker.getLastAccessed(1)).toBe(touched);
+  });
+
+  it('an overdue startup alarm compensates before overwriting the heartbeat', async () => {
+    // BUG (shipped v1.3.0): onAlarmFired wrote lastTickAt=now BEFORE ensureReady,
+    // so a persisted missed alarm firing at startup erased the downtime evidence
+    // that init had not yet read — and a week-away machine closed its tabs.
+    seedTab(1, 30 * DAY);
+    store['lastTickAt'] = Date.now() - 30 * DAY;
+    // session marker absent => genuine restart
+
+    const { onAlarmFired } = await import('../background/timer-manager');
+    const tracker = await import('../background/tab-tracker');
+    const browser = (await import('webextension-polyfill')).default;
+    vi.mocked(browser.tabs.query).mockResolvedValue([
+      { id: 1, active: false, pinned: false, url: 'https://a.com' } as any,
+    ]);
+
+    await onAlarmFired({ name: 'aging-tabs-check' } as any);
+
+    const elapsed = Date.now() - tracker.getLastAccessed(1)!;
+    expect(elapsed).toBeLessThan(1000); // compensated, not charged 30 days
   });
 
   it('stands down while paused — pause accounting already covers the gap', async () => {

@@ -109,9 +109,12 @@ function readStageInputs(): number[] | null {
 function stageInputsValid(): boolean {
   if (!customStagesToggle.checked) return true;
   const values = readStageInputs()!;
-  const timeout = Number(timeoutInput.value) || 30;
+  // Compare against the timeout as it will actually be stored — clamped to the
+  // 30-day maximum — so a huge typed timeout can't wave through a stage mark
+  // that the backend then rejects as unreachable.
+  const timeout = Math.min(43200, Number(timeoutInput.value) || 30);
   return values.every((v, i) =>
-    Number.isFinite(v) && v > 0 && v < timeout && v <= 43200 && (i === 0 || v > values[i - 1]),
+    Number.isFinite(v) && v > 0 && v < timeout && (i === 0 || v > values[i - 1]),
   );
 }
 

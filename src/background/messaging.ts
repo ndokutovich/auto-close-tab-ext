@@ -24,11 +24,32 @@ function isAllowedFaviconUrl(url: string): boolean {
     return false;
   }
 
-  // Block private/internal IPs
-  const host = parsed.hostname;
+  // URL.hostname lower-cases and, for IPv6, wraps in brackets: `[::1]`.
+  const host = parsed.hostname.toLowerCase();
+
+  // IPv6: loopback and unique-local (fc00::/7 -> fc.. / fd..). Bracketed form.
+  if (host.startsWith('[')) {
+    const inner = host.slice(1, -1);
+    if (inner === '::1' || inner.startsWith('fc') || inner.startsWith('fd') ||
+        inner.startsWith('fe80') /* link-local */) {
+      return false;
+    }
+  }
+
+  // Named hosts that never point at the public internet.
+  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) {
+    return false;
+  }
+
+  // A bare hostname with no dot (e.g. "router", "nas") resolves only on the
+  // local network — reject it; a real public favicon host is always dotted.
+  const isIpLiteral = host.startsWith('[') || /^\d+\.\d+\.\d+\.\d+$/.test(host);
+  if (!isIpLiteral && !host.includes('.')) {
+    return false;
+  }
+
+  // Private / internal IPv4 ranges.
   if (
-    host === 'localhost' ||
-    host === '::1' ||
     host.startsWith('127.') ||
     host.startsWith('10.') ||
     host.startsWith('0.') ||
@@ -39,6 +60,10 @@ function isAllowedFaviconUrl(url: string): boolean {
     return false;
   }
 
+  // NOTE: a public hostname that resolves (via DNS) to a private address is not
+  // caught here — that needs resolution we cannot do in-page. Following no
+  // redirects (below) removes the redirect-based rebinding vector; the DNS-name
+  // vector is a documented residual limitation.
   return true;
 }
 
@@ -58,44 +83,53 @@ const MAX_FAVICON_BYTES = 1024 * 1024; // 1 MB
  *   - only image/* content types are accepted, so arbitrary bytes are never
  *     handed back to be set as an <img> source.
  */
+const FAVICON_FETCH_TIMEOUT_MS = 10_000;
+
 async function fetchFaviconDataUrl(url: string): Promise<string | null> {
-  const res = await fetch(url, { redirect: 'follow', credentials: 'omit' });
-  if (!res.ok) return null;
+  const controller = new AbortController();
+  const deadline = setTimeout(() => controller.abort(), FAVICON_FETCH_TIMEOUT_MS);
+  try {
+    // redirect:'error' — do NOT follow redirects. Following them would issue a
+    // second, privileged request to a page-chosen location (an internal host,
+    // a router endpoint) before any re-validation could run. A favicon that
+    // 30x-redirects simply isn't dimmed; correctness costs nothing here.
+    const res = await fetch(url, { redirect: 'error', credentials: 'omit', signal: controller.signal });
+    if (!res.ok) return null;
 
-  // The final URL after any redirects must itself be allowed.
-  if (res.url && !isAllowedFaviconUrl(res.url)) return null;
+    const contentType = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+    if (!contentType.startsWith('image/')) return null;
 
-  const contentType = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
-  if (!contentType.startsWith('image/')) return null;
+    const declared = res.headers.get('content-length');
+    if (declared && Number(declared) > MAX_FAVICON_BYTES) return null;
 
-  const declared = res.headers.get('content-length');
-  if (declared && Number(declared) > MAX_FAVICON_BYTES) return null;
+    const reader = res.body?.getReader();
+    if (!reader) return null;
 
-  const reader = res.body?.getReader();
-  if (!reader) return null;
-
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) {
-      total += value.byteLength;
-      if (total > MAX_FAVICON_BYTES) {
-        await reader.cancel().catch(() => {});
-        return null;
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value) {
+        total += value.byteLength;
+        if (total > MAX_FAVICON_BYTES) {
+          await reader.cancel().catch(() => {});
+          return null;
+        }
+        chunks.push(value);
       }
-      chunks.push(value);
     }
+
+    const bytes = new Uint8Array(total);
+    let offset = 0;
+    for (const c of chunks) { bytes.set(c, offset); offset += c.byteLength; }
+
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return `data:${contentType};base64,${btoa(binary)}`;
+  } finally {
+    clearTimeout(deadline);
   }
-
-  const bytes = new Uint8Array(total);
-  let offset = 0;
-  for (const c of chunks) { bytes.set(c, offset); offset += c.byteLength; }
-
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-  return `data:${contentType};base64,${btoa(binary)}`;
 }
 
 export function setupMessageListener(): void {

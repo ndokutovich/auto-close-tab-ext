@@ -48,16 +48,19 @@ export function normalizeStageThresholds(
   // A mark at or past the timeout is unreachable — the tab closes at the
   // timeout before that stage could begin. Reject rather than accept a
   // schedule with stages that never show.
+  // A mark must be strictly below the timeout to be reachable — a mark equal to
+  // the timeout (including at the maximum timeout) fires only as the tab closes,
+  // so the stage is never actually shown. When no timeout is given, bound by the
+  // absolute maximum instead.
   const ceiling = typeof timeoutMinutes === 'number' && timeoutMinutes > 0
     ? Math.min(MAX_TIMEOUT_MINUTES, timeoutMinutes)
-    : MAX_TIMEOUT_MINUTES;
-  const strictlyBelowCeiling = ceiling < MAX_TIMEOUT_MINUTES;
+    : MAX_TIMEOUT_MINUTES + 1;
 
   let previous = 0;
   for (const value of input) {
     if (typeof value !== 'number' || !Number.isFinite(value)) return null;
     if (value <= 0) return null;
-    if (strictlyBelowCeiling ? value >= ceiling : value > ceiling) return null;
+    if (value >= ceiling) return null;
     if (value <= previous) return null; // must strictly ascend
     previous = value;
   }

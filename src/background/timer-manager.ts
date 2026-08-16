@@ -73,12 +73,12 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
 
   if (alarm.name !== ALARM_NAME) return;
 
-  // Heartbeat for browser-downtime detection. Written before any gating —
-  // a paused or idle browser is still a *running* browser, and the next
-  // startup needs an accurate mark of when we were last alive.
-  await setLastTickAt(Date.now());
-
+  // Initialize FIRST, then stamp the heartbeat. initTracker reads the previous
+  // heartbeat to measure browser downtime; writing the new one before init runs
+  // would erase that evidence when a persisted, overdue alarm fires at startup
+  // — the exact case (long absence) the downtime feature exists to handle.
   await ensureReady();
+  await setLastTickAt(Date.now());
 
   const settings = await getSettings();
 
@@ -91,7 +91,7 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
   // Timers will resume from frozen state when unpaused.
   if (isPaused()) return;
 
-  await applyAging(settings, { force: false, closeExpired: true });
+  await runAgingExclusive(settings, { force: false, closeExpired: true });
 }
 
 type AgingVisuals = Pick<Settings, 'faviconDimming' | 'titlePrefix' | 'titleBlink'>;
@@ -104,9 +104,20 @@ function visualsOf(settings: Settings): AgingVisuals {
   };
 }
 
+// Serialize every aging pass. The alarm and a settings-triggered refresh both
+// mutate shared tab-stage state across await points; without this they could
+// interleave, one using stale settings and overwriting or closing what the
+// other just decided.
+let agingChain: Promise<void> = Promise.resolve();
+function runAgingExclusive(settings: Settings, opts: { force: boolean; closeExpired: boolean }): Promise<void> {
+  const task = agingChain.then(() => applyAging(settings, opts));
+  agingChain = task.catch(() => {}); // never break the chain on error
+  return task;
+}
+
 /**
  * Recompute every tracked tab's stage and, when it changed (or `force`), send
- * the update. Optionally close expired tabs.
+ * the update. Optionally close expired tabs. Always run via runAgingExclusive.
  *
  * `force` exists for settings changes: stage-delta gating means a plain repaint
  * would never reach an already-painted tab, so toggling a visual off (or a
@@ -157,9 +168,12 @@ async function applyAging(
 
     if (elapsed >= timeoutMs) {
       if (opts.closeExpired) tabsToClose.push(tabId);
-      else if (opts.force && !tab.discarded) {
-        // Not closing on this pass — still repaint at the terminal stage.
-        sendAgingUpdate(tabId, MAX_STAGE, 0, visuals);
+      else if (opts.force) {
+        // Not closing on this pass — record and repaint the terminal stage so
+        // the tracker's stored stage matches what content shows (otherwise a
+        // later immune pass sees stage 0 and never sends a reset).
+        if (getStage(tabId) !== MAX_STAGE) setStage(tabId, MAX_STAGE);
+        if (!tab.discarded) sendAgingUpdate(tabId, MAX_STAGE, 0, visuals);
       }
       continue;
     }
@@ -184,6 +198,13 @@ async function applyAging(
       try {
         const tab = tabMap.get(tabId);
         if (!tab) continue;
+
+        // Re-check against live tracker state: an await earlier in this loop
+        // (a previous buryTab/remove) may have yielded long enough for the user
+        // to activate this queued tab, which resets its timer. Closing it on
+        // the stale snapshot would kill a tab the user just returned to.
+        const la = getLastAccessed(tabId);
+        if (la === undefined || Date.now() - la < timeoutMs) continue;
 
         const cachedTitle = cleanTitles.get(tabId);
 
@@ -221,9 +242,28 @@ async function applyAging(
  */
 export async function refreshVisualsForAllTabs(): Promise<void> {
   await ensureReady();
-  if (isPaused()) return;
   const settings = await getSettings();
-  await applyAging(settings, { force: true, closeExpired: false });
+  if (isPaused()) {
+    // Aging is frozen, so elapsed time is meaningless — repaint each tab at its
+    // stored (frozen) stage with the new visuals, rather than skip. Without
+    // this, disabling a visual while paused leaves painted tabs stuck until an
+    // unpause plus a later stage transition.
+    await repaintFrozenVisuals(settings);
+    return;
+  }
+  await runAgingExclusive(settings, { force: true, closeExpired: false });
+}
+
+async function repaintFrozenVisuals(settings: Settings): Promise<void> {
+  const visuals = visualsOf(settings);
+  const timeoutMs = settings.timeoutMinutes * 60 * 1000;
+  const allTabs = await browser.tabs.query({});
+  const tabMap = new Map(allTabs.map(t => [t.id!, t]));
+  for (const tabId of getAllTrackedTabIds()) {
+    const tab = tabMap.get(tabId);
+    if (!tab || tab.discarded) continue;
+    sendAgingUpdate(tabId, getStage(tabId), timeoutMs, visuals);
+  }
 }
 
 /**
@@ -238,6 +278,16 @@ export async function currentAgingMessageFor(tabId: number): Promise<BgToContent
   if (lastAccessed === undefined) return null;
 
   const settings = await getSettings();
+
+  // An immune tab (pinned, locked, active, audible, whitelisted, or under the
+  // min-tab floor) must not be painted — recompute immunity here, or a
+  // long-unused pinned tab would get a stage-4 snapshot and start blinking.
+  const allTabs = await browser.tabs.query({});
+  const tab = allTabs.find(t => t.id === tabId);
+  if (!tab) return null;
+  const immunityCtx = buildImmunityContext(settings, allTabs, await getLockedTabs());
+  if (isImmune(tab, immunityCtx)) return null;
+
   const timeoutMs = settings.timeoutMinutes * 60 * 1000;
   const thresholdsMs = settings.stageThresholdMinutes
     ? settings.stageThresholdMinutes.map(m => m * 60 * 1000)
