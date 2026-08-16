@@ -3,6 +3,7 @@ import type { ExtensionMessage } from '../shared/types';
 import { getSettings, saveSettings, getGraveyard, getLockedTabs, lockTab, unlockTab, exportAllData, importData } from '../shared/storage';
 import { restoreTab, removeEntry, clearAll } from './graveyard';
 import { getAllTrackedTabIds, getLastAccessed, getStage, ensureReady, isPaused, setPause } from './tab-tracker';
+import { refreshVisualsForAllTabs, currentAgingMessageFor } from './timer-manager';
 import { syncBadge } from './graveyard';
 
 function isExtensionSender(sender: browser.Runtime.MessageSender): boolean {
@@ -41,6 +42,62 @@ function isAllowedFaviconUrl(url: string): boolean {
   return true;
 }
 
+const MAX_FAVICON_BYTES = 1024 * 1024; // 1 MB
+
+/**
+ * Fetch a favicon from the privileged background context and return it as a
+ * data: URL, or null if anything about the response is untrustworthy.
+ *
+ * Security-relevant choices, all because the URL is page-controlled and this
+ * context holds <all_urls>:
+ *   - redirects are followed but the FINAL url is re-validated, so a public URL
+ *     cannot bounce the fetch onto a private address (SSRF).
+ *   - credentials are omitted, so the request carries no cookies.
+ *   - the body is read through a reader with a hard byte cap, so a response
+ *     with no/By-lying Content-Length cannot buffer unbounded memory.
+ *   - only image/* content types are accepted, so arbitrary bytes are never
+ *     handed back to be set as an <img> source.
+ */
+async function fetchFaviconDataUrl(url: string): Promise<string | null> {
+  const res = await fetch(url, { redirect: 'follow', credentials: 'omit' });
+  if (!res.ok) return null;
+
+  // The final URL after any redirects must itself be allowed.
+  if (res.url && !isAllowedFaviconUrl(res.url)) return null;
+
+  const contentType = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+  if (!contentType.startsWith('image/')) return null;
+
+  const declared = res.headers.get('content-length');
+  if (declared && Number(declared) > MAX_FAVICON_BYTES) return null;
+
+  const reader = res.body?.getReader();
+  if (!reader) return null;
+
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) {
+      total += value.byteLength;
+      if (total > MAX_FAVICON_BYTES) {
+        await reader.cancel().catch(() => {});
+        return null;
+      }
+      chunks.push(value);
+    }
+  }
+
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const c of chunks) { bytes.set(c, offset); offset += c.byteLength; }
+
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return `data:${contentType};base64,${btoa(binary)}`;
+}
+
 export function setupMessageListener(): void {
   browser.runtime.onMessage.addListener(
     (message: unknown, sender: browser.Runtime.MessageSender): Promise<any> | undefined => {
@@ -49,42 +106,29 @@ export function setupMessageListener(): void {
         // --- Content script messages (any sender) ---
 
         case 'CONTENT_READY':
-          return undefined;
+          // A freshly injected content script (first load, or replacing an old
+          // one after an extension update) holds no state. Hand it the tab's
+          // current aging so it paints correctly at once, rather than waiting
+          // for the next stage transition — which at stage 4 never comes.
+          if (sender.tab?.id === undefined) return Promise.resolve(null);
+          return currentAgingMessageFor(sender.tab.id).catch(() => null);
 
         case 'FETCH_FAVICON_REQUEST': {
           const { url, requestId } = msg;
           if (!isAllowedFaviconUrl(url)) {
             return Promise.resolve({ ok: false });
           }
-          const MAX_FAVICON_BYTES = 1024 * 1024; // 1 MB
-          return fetch(url)
-            .then(res => {
-              if (!res.ok) throw new Error(`favicon fetch ${res.status}`);
-              const len = res.headers.get('content-length');
-              if (len && Number(len) > MAX_FAVICON_BYTES) {
-                throw new Error('favicon too large');
-              }
-              return res.blob();
-            })
-            .then(blob => {
-              if (blob.size > MAX_FAVICON_BYTES) {
-                throw new Error('favicon too large');
-              }
-              return new Promise<string>((resolve) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result as string);
-                reader.readAsDataURL(blob);
-              });
-            })
+          return fetchFaviconDataUrl(url)
             .then(dataUrl => {
-              if (sender.tab?.id) {
+              if (dataUrl && sender.tab?.id) {
                 browser.tabs.sendMessage(sender.tab.id, {
                   type: 'FETCH_FAVICON_RESULT',
                   dataUrl,
                   requestId,
                 });
+                return { ok: true };
               }
-              return { ok: true };
+              return { ok: false };
             })
             .catch(() => ({ ok: false }));
         }
@@ -125,9 +169,16 @@ export function setupMessageListener(): void {
           if (!isExtensionSender(sender)) return Promise.resolve({ ok: false });
           return clearAll().then(() => ({ ok: true }));
 
-        case 'SAVE_SETTINGS':
+        case 'SAVE_SETTINGS': {
           if (!isExtensionSender(sender)) return Promise.resolve({ ok: false });
-          return saveSettings(msg.settings);
+          return saveSettings(msg.settings).then(stored => {
+            // Push the new visuals to every tab now — stage-delta gating would
+            // otherwise never repaint tabs already showing an effect the user
+            // just turned off. Fire-and-forget; the caller only needs `stored`.
+            refreshVisualsForAllTabs().catch(() => {});
+            return stored;
+          });
+        }
 
         case 'LOCK_TAB':
           if (!isExtensionSender(sender)) return Promise.resolve({ ok: false });

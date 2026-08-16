@@ -1,6 +1,6 @@
 import browser from 'webextension-polyfill';
 import type { AgingStage, BgToContentMsg, Settings } from '../shared/types';
-import { ALARM_NAME, CHECK_INTERVAL_SECONDS } from '../shared/constants';
+import { ALARM_NAME, CHECK_INTERVAL_SECONDS, MAX_STAGE } from '../shared/constants';
 import { computeAgingStage, extractDomain, stripAgingPrefix } from '../shared/pure';
 import { msg } from '../shared/i18n';
 import { getSettings, getGraveyard, getLockedTabs, setLastTickAt } from '../shared/storage';
@@ -90,18 +90,40 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
   // Globally paused — skip stage progression and closures entirely.
   // Timers will resume from frozen state when unpaused.
   if (isPaused()) return;
-  const timeoutMs = settings.timeoutMinutes * 60 * 1000;
-  const thresholdsMs = settings.stageThresholdMinutes
-    ? settings.stageThresholdMinutes.map(m => m * 60 * 1000)
-    : null;
-  const visuals = {
+
+  await applyAging(settings, { force: false, closeExpired: true });
+}
+
+type AgingVisuals = Pick<Settings, 'faviconDimming' | 'titlePrefix' | 'titleBlink'>;
+
+function visualsOf(settings: Settings): AgingVisuals {
+  return {
     faviconDimming: settings.faviconDimming,
     titlePrefix: settings.titlePrefix,
     titleBlink: settings.titleBlink,
   };
+}
+
+/**
+ * Recompute every tracked tab's stage and, when it changed (or `force`), send
+ * the update. Optionally close expired tabs.
+ *
+ * `force` exists for settings changes: stage-delta gating means a plain repaint
+ * would never reach an already-painted tab, so toggling a visual off (or a
+ * stage-4 tab that will never transition again) would keep the old paint
+ * forever. On a settings save we repaint unconditionally and skip closing.
+ */
+async function applyAging(
+  settings: Settings,
+  opts: { force: boolean; closeExpired: boolean },
+): Promise<void> {
+  const timeoutMs = settings.timeoutMinutes * 60 * 1000;
+  const thresholdsMs = settings.stageThresholdMinutes
+    ? settings.stageThresholdMinutes.map(m => m * 60 * 1000)
+    : null;
+  const visuals = visualsOf(settings);
   const now = Date.now();
 
-  // Single query for all tabs, build lookup map — avoids N+1 tabs.get() calls
   const allTabs = await browser.tabs.query({});
   const tabMap = new Map(allTabs.map(t => [t.id!, t]));
   const openTabIds = new Set(allTabs.map(t => t.id!));
@@ -122,11 +144,11 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
     if (!tab) continue;
 
     if (isImmune(tab, immunityCtx)) {
-      if (getStage(tabId) > 0) {
-        setStage(tabId, 0);
+      const changed = getStage(tabId) > 0;
+      if (changed) setStage(tabId, 0);
+      if ((changed || opts.force) && !tab.discarded) {
         sendAgingUpdate(tabId, 0, timeoutMs, visuals);
       }
-      // Cache clean title while tab is immune / at stage 0
       if (tab.title) cleanTitles.set(tabId, stripAgingPrefix(tab.title));
       continue;
     }
@@ -134,57 +156,57 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
     const elapsed = now - lastAccessed;
 
     if (elapsed >= timeoutMs) {
-      tabsToClose.push(tabId);
+      if (opts.closeExpired) tabsToClose.push(tabId);
+      else if (opts.force && !tab.discarded) {
+        // Not closing on this pass — still repaint at the terminal stage.
+        sendAgingUpdate(tabId, MAX_STAGE, 0, visuals);
+      }
       continue;
     }
 
     const newStage = computeAgingStage(elapsed, timeoutMs, thresholdsMs);
     const oldStage = getStage(tabId);
 
-    // Cache clean title while still recoverable (before stage-4 blink)
     if (newStage < 4 && tab.title) {
       cleanTitles.set(tabId, stripAgingPrefix(tab.title));
     }
 
-    if (newStage !== oldStage) {
-      setStage(tabId, newStage);
-      // Discarded tabs can't receive messages — skip the content script update
-      if (!tab.discarded) {
-        sendAgingUpdate(tabId, newStage, timeoutMs - elapsed, visuals);
-      }
+    if (newStage !== oldStage) setStage(tabId, newStage);
+    if ((newStage !== oldStage || opts.force) && !tab.discarded) {
+      sendAgingUpdate(tabId, newStage, timeoutMs - elapsed, visuals);
     }
   }
 
-  // Handle expired tabs — close or discard based on setting
-  let tabCount = immunityCtx.totalTabCount;
-  for (const tabId of tabsToClose) {
-    if (tabCount <= settings.minTabCount) break;
-    try {
-      const tab = tabMap.get(tabId);
-      if (!tab) continue;
+  if (opts.closeExpired) {
+    let tabCount = immunityCtx.totalTabCount;
+    for (const tabId of tabsToClose) {
+      if (tabCount <= settings.minTabCount) break;
+      try {
+        const tab = tabMap.get(tabId);
+        if (!tab) continue;
 
-      const cachedTitle = cleanTitles.get(tabId);
+        const cachedTitle = cleanTitles.get(tabId);
 
-      if (settings.expireAction === 'discard') {
-        if (typeof browser.tabs.discard === 'function') {
-          if (tab.discarded) continue; // already discarded — nothing to do
-          await browser.tabs.discard(tabId);
+        if (settings.expireAction === 'discard') {
+          if (typeof browser.tabs.discard === 'function') {
+            if (tab.discarded) continue;
+            await browser.tabs.discard(tabId);
+          } else {
+            const entry = await buryTab(tab, settings.graveyardMaxSize, cachedTitle);
+            await browser.tabs.remove(tabId);
+            tabCount--;
+            showCloseNotification(tab, entry.id);
+          }
         } else {
-          // Safari doesn't support tabs.discard — fall back to close
           const entry = await buryTab(tab, settings.graveyardMaxSize, cachedTitle);
           await browser.tabs.remove(tabId);
           tabCount--;
           showCloseNotification(tab, entry.id);
         }
-      } else {
-        const entry = await buryTab(tab, settings.graveyardMaxSize, cachedTitle);
-        await browser.tabs.remove(tabId);
-        tabCount--;
-        showCloseNotification(tab, entry.id);
+        cleanTitles.delete(tabId);
+      } catch {
+        // Tab already gone or can't be discarded
       }
-      cleanTitles.delete(tabId);
-    } catch {
-      // Tab already gone or can't be discarded
     }
   }
 
@@ -192,7 +214,45 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
   await saveCleanTitles();
 }
 
-type AgingVisuals = Pick<Settings, 'faviconDimming' | 'titlePrefix' | 'titleBlink'>;
+/**
+ * Immediately repaint every tab from current settings. Called after a settings
+ * save so a toggled-off visual (or changed stage timings) reaches tabs at once
+ * instead of waiting for a stage transition that may never come.
+ */
+export async function refreshVisualsForAllTabs(): Promise<void> {
+  await ensureReady();
+  if (isPaused()) return;
+  const settings = await getSettings();
+  await applyAging(settings, { force: true, closeExpired: false });
+}
+
+/**
+ * The current aging message for one tab, for a freshly injected content script
+ * that asks via CONTENT_READY. Returns null if the tab is not tracked, immune,
+ * or aging is paused — nothing to paint.
+ */
+export async function currentAgingMessageFor(tabId: number): Promise<BgToContentMsg | null> {
+  await ensureReady();
+  if (isPaused()) return null;
+  const lastAccessed = getLastAccessed(tabId);
+  if (lastAccessed === undefined) return null;
+
+  const settings = await getSettings();
+  const timeoutMs = settings.timeoutMinutes * 60 * 1000;
+  const thresholdsMs = settings.stageThresholdMinutes
+    ? settings.stageThresholdMinutes.map(m => m * 60 * 1000)
+    : null;
+  const elapsed = Date.now() - lastAccessed;
+  const stage = elapsed >= timeoutMs
+    ? MAX_STAGE
+    : computeAgingStage(elapsed, timeoutMs, thresholdsMs);
+  return {
+    type: 'UPDATE_AGING',
+    stage,
+    timeRemainingMs: Math.max(0, timeoutMs - elapsed),
+    ...visualsOf(settings),
+  };
+}
 
 function sendAgingUpdate(
   tabId: number,

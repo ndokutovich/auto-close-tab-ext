@@ -5,19 +5,30 @@ import { STAGE_GRAYSCALE } from '../shared/constants';
 let originalFaviconUrl: string | null = null;
 let lastAppliedDataUrl: string | null = null;
 
-/**
- * A fresh canvas per draw, deliberately not cached.
- *
- * Drawing a cross-origin image taints a canvas permanently. A shared one would
- * stay poisoned for the rest of the page's life, so the background-fetched copy
- * — clean data: pixels that should read back fine — would still fail toDataURL
- * on the very canvas the failed attempt ruined.
- */
-function createCanvas(): HTMLCanvasElement {
-  const c = document.createElement('canvas');
-  c.width = 32;
-  c.height = 32;
-  return c;
+// Bumped on every stage change and every reset. Async work (image load,
+// background fetch) captures the value at request time and bails if it moved —
+// so a slow load that finishes after the tab was reset or restaged can no
+// longer paint a stale icon over the current one.
+let generation = 0;
+
+// A single 32x32 canvas, reused. Favicons render at 32px, so there is no reason
+// to back an image's natural size — an 8192x8192 SVG favicon would otherwise
+// demand ~256 MiB per draw. Reassigning `width` also resets the canvas's
+// origin-clean flag, so a cross-origin draw that tainted it does not poison the
+// next (clean, background-fetched) draw.
+let canvas: HTMLCanvasElement | null = null;
+function drawGrayscale(img: HTMLImageElement, percentage: number): string {
+  if (!canvas) canvas = document.createElement('canvas');
+  canvas.width = 32; // also clears any prior taint
+  canvas.height = 32;
+  const ctx = canvas.getContext('2d')!;
+  ctx.clearRect(0, 0, 32, 32);
+  ctx.filter = `grayscale(${percentage}%)`;
+  ctx.globalAlpha = 1 - (percentage / 100) * 0.3; // slight fade at full grayscale
+  ctx.drawImage(img, 0, 0, 32, 32);
+  ctx.filter = 'none';
+  ctx.globalAlpha = 1;
+  return canvas.toDataURL('image/png');
 }
 
 function getCurrentFaviconUrl(): string {
@@ -37,41 +48,27 @@ function setFavicon(dataUrl: string): void {
   link.href = dataUrl;
 }
 
-function applyGrayscale(img: HTMLImageElement, percentage: number): string {
-  const c = createCanvas();
-  const ctx = c.getContext('2d')!;
-
-  const w = img.naturalWidth || 32;
-  const h = img.naturalHeight || 32;
-  if (c.width !== w) c.width = w;
-  if (c.height !== h) c.height = h;
-  ctx.clearRect(0, 0, c.width, c.height);
-  ctx.filter = `grayscale(${percentage}%)`;
-  ctx.globalAlpha = 1 - (percentage / 100) * 0.3; // slight fade at full grayscale
-  ctx.drawImage(img, 0, 0, c.width, c.height);
-  ctx.filter = 'none';
-  ctx.globalAlpha = 1;
-
-  return c.toDataURL('image/png');
-}
-
 export function handleFaviconAging(stage: AgingStage, _timeRemainingMs: number): void {
   if (stage === 0) {
     resetFavicon();
     return;
   }
 
-  // Capture original on first aging, re-capture if the page changed its favicon
-  // (e.g. notification badges, dynamic favicons). We compare against what we
-  // last applied to distinguish page-initiated changes from our own grayscale.
   const currentUrl = getCurrentFaviconUrl();
+  // Never adopt one of our own dimmed data: URLs as the "original" — doing so
+  // would make resetFavicon restore a gray icon permanently.
+  const currentIsOurs = currentUrl === lastAppliedDataUrl || currentUrl.startsWith('data:');
   if (originalFaviconUrl === null) {
-    originalFaviconUrl = currentUrl;
-  } else if (currentUrl !== lastAppliedDataUrl && currentUrl !== originalFaviconUrl) {
+    originalFaviconUrl = currentIsOurs ? null : currentUrl;
+  } else if (!currentIsOurs && currentUrl !== originalFaviconUrl) {
+    // Page changed its own favicon (badge, dynamic icon) — re-capture.
     originalFaviconUrl = currentUrl;
   }
+  if (originalFaviconUrl === null) return;
 
   const percentage = STAGE_GRAYSCALE[stage];
+  const gen = ++generation;
+  const sourceUrl = originalFaviconUrl;
   const img = new Image();
 
   // Deliberately NOT setting img.crossOrigin. With it, a favicon served without
@@ -81,26 +78,26 @@ export function handleFaviconAging(stage: AgingStage, _timeRemainingMs: number):
   // (which has host permissions) takes over.
 
   img.onload = () => {
+    if (gen !== generation) return; // superseded by a newer stage or a reset
     try {
-      const dataUrl = applyGrayscale(img, percentage);
+      const dataUrl = drawGrayscale(img, percentage);
       lastAppliedDataUrl = dataUrl;
       setFavicon(dataUrl);
     } catch {
-      // Canvas tainted by cross-origin pixels — let the background fetch it.
-      requestFaviconViaBackground(originalFaviconUrl!, percentage);
+      requestFaviconViaBackground(sourceUrl, percentage, gen);
     }
   };
 
   img.onerror = () => {
-    // The icon may still be reachable from the background, which is not bound
-    // by the page's origin — try there before giving up on this tab.
-    requestFaviconViaBackground(originalFaviconUrl!, percentage);
+    if (gen !== generation) return;
+    requestFaviconViaBackground(sourceUrl, percentage, gen);
   };
 
-  img.src = originalFaviconUrl;
+  img.src = sourceUrl;
 }
 
 export function resetFavicon(): void {
+  generation++; // invalidate any in-flight load/fetch
   if (originalFaviconUrl !== null) {
     setFavicon(originalFaviconUrl);
     originalFaviconUrl = null;
@@ -108,32 +105,56 @@ export function resetFavicon(): void {
   }
 }
 
-// Fallback: ask background to fetch cross-origin favicon
-async function requestFaviconViaBackground(url: string, percentage: number): Promise<void> {
+// Per-origin favicon fetched once from the background, keyed by source URL, so
+// aging through four stages does not re-download the same icon four times.
+// Grayscale is reapplied locally from the cached raw bytes on each stage.
+const rawFaviconCache = new Map<string, string>();
+// Source URLs the background could not fetch (dead /favicon.ico guesses, blocked
+// hosts) — remembered so every stage change does not retry a doomed request.
+const faviconUnfetchable = new Set<string>();
+
+/** Redraw a cached/received raw favicon data: URL at the given grayscale. */
+function drawFromRaw(rawDataUrl: string, percentage: number, gen: number): void {
+  const img = new Image();
+  img.onload = () => {
+    if (gen !== generation) return;
+    try {
+      // A data: URL is same-origin, so the canvas stays clean here.
+      const dataUrl = drawGrayscale(img, percentage);
+      lastAppliedDataUrl = dataUrl;
+      setFavicon(dataUrl);
+    } catch {
+      // Nothing further to try — leave the icon as the page set it.
+    }
+  };
+  img.src = rawDataUrl;
+}
+
+// Fallback: ask the background (host permissions, not bound by page origin) to
+// fetch the icon and return it as a same-origin data: URL we can redraw.
+async function requestFaviconViaBackground(
+  url: string,
+  percentage: number,
+  gen: number,
+): Promise<void> {
+  if (faviconUnfetchable.has(url)) return; // known dead — don't retry
+  const cached = rawFaviconCache.get(url);
+  if (cached) { drawFromRaw(cached, percentage, gen); return; }
+
   try {
-    const requestId = `${Date.now()}-${Math.random()}`;
+    const requestId = `${gen}-${url}`;
 
     const handler = (message: any) => {
       if (message.type === 'FETCH_FAVICON_RESULT' && message.requestId === requestId) {
         browser.runtime.onMessage.removeListener(handler);
         clearTimeout(timeoutId);
-        const img = new Image();
-        img.onload = () => {
-          try {
-            // A data: URL is same-origin, so the canvas stays clean here.
-            const dataUrl = applyGrayscale(img, percentage);
-            lastAppliedDataUrl = dataUrl;
-            setFavicon(dataUrl);
-          } catch {
-            // Nothing further to try — leave the icon as the page set it.
-          }
-        };
-        img.src = message.dataUrl;
+        rawFaviconCache.set(url, message.dataUrl);
+        if (gen !== generation) return; // reset/restaged while we waited
+        drawFromRaw(message.dataUrl, percentage, gen);
       }
     };
 
     browser.runtime.onMessage.addListener(handler);
-    // Remove listener after 5s if background never replies (prevents leak)
     const timeoutId = setTimeout(() => {
       browser.runtime.onMessage.removeListener(handler);
     }, 5000);
@@ -143,10 +164,10 @@ async function requestFaviconViaBackground(url: string, percentage: number): Pro
       url,
       requestId,
     }) as { ok?: boolean } | undefined;
-    // Background returns { ok: false } when fetch fails — clean up early
     if (res && !res.ok) {
       clearTimeout(timeoutId);
       browser.runtime.onMessage.removeListener(handler);
+      faviconUnfetchable.add(url); // remember the failure; stop hammering it
     }
   } catch {
     // Background not available

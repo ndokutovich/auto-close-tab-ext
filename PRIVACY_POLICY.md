@@ -17,12 +17,17 @@ Aging Tabs is a browser extension that auto-closes inactive tabs. It operates en
 - No third-party services are used
 - No data is ever sent anywhere
 
-The extension makes exactly one kind of network request: fetching a tab's own
-favicon so it can be dimmed. This happens only when the page's icon is hosted
-on a different origin than the page, which stops the icon being readable from
-the page itself. The request goes to the same icon URL the browser already
-loaded, carries no data of ours, and the result is used only to redraw the icon
-in that tab. Turning off "Favicon dimming" stops it entirely.
+The extension makes one kind of network request: fetching a tab's own favicon
+so it can be dimmed. It happens when an aging tab's icon cannot be read back
+from the page — most often because the icon is hosted on a different origin
+(a CDN) with no CORS headers, or because the page declares no icon and the
+extension falls back to the conventional `/favicon.ico` on the page's own
+origin. The request is for the favicon's own URL; it follows redirects but
+re-checks that the final address is a public web address (it will not reach
+private or internal hosts), sends no cookies, and carries no data of ours. The
+result is used only to redraw the icon in that tab and is never stored or
+transmitted anywhere. Turning off "Favicon dimming" stops these requests
+entirely.
 
 ## Data Storage
 

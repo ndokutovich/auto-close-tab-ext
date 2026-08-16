@@ -49,7 +49,7 @@ Don't want to close tabs? Switch to discard mode — tabs stay visible but unloa
 - Protect grouped tabs on/off
 
 **Privacy First**
-All data stays in your browser. No accounts, no servers, no tracking, nothing sent anywhere. The only request it ever makes is re-fetching a tab's own favicon when that icon lives on another domain and cannot be read from the page — needed to dim it.
+All data stays in your browser. No accounts, no servers, no tracking, nothing sent anywhere. The only request it ever makes is re-fetching a tab's own favicon to dim it, when that icon can't be read back from the page — a cross-origin/CDN icon, or the fallback favicon. It sends no cookies and never reaches private hosts.
 
 **Lightweight**
 Pure TypeScript, no frameworks. Follows your browser's light/dark theme. Available in English and Russian.

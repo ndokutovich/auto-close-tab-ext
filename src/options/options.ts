@@ -50,9 +50,39 @@ function applySettingsToForm(settings: Settings): void {
   historySyncToggle.checked = settings.historySyncEnabled;
 }
 
-/** Even fractions of the timeout — what the stages default to. */
+// Four distinct integer stages need a timeout of at least 5 minutes to fit
+// below it (marks must be < timeout and strictly ascending). Custom stage
+// timings are offered only at or above this.
+const MIN_TIMEOUT_FOR_CUSTOM_STAGES = 5;
+
+/**
+ * Strictly-ascending default marks, all below the timeout. Built to be valid by
+ * construction so enabling custom stages and saving without edits never trips
+ * validation with the extension's own prefill.
+ */
 function evenStages(timeoutMinutes: number): number[] {
-  return [1, 2, 3, 4].map(n => Math.max(1, Math.round((timeoutMinutes * n) / 5)));
+  const out: number[] = [];
+  for (let n = 1; n <= 4; n++) {
+    const even = Math.round((timeoutMinutes * n) / 5);
+    // Keep each at least one above the previous, and at least one below timeout.
+    const floor = (out[n - 2] ?? 0) + 1;
+    out.push(Math.min(timeoutMinutes - 1, Math.max(floor, even)));
+  }
+  return out;
+}
+
+function customStagesSupported(timeoutMinutes: number): boolean {
+  return timeoutMinutes >= MIN_TIMEOUT_FOR_CUSTOM_STAGES;
+}
+
+function refreshCustomStageAvailability(): void {
+  const timeout = Number(timeoutInput.value) || 30;
+  const supported = customStagesSupported(timeout);
+  customStagesToggle.disabled = !supported;
+  if (!supported) {
+    customStagesToggle.checked = false;
+    stageField.hidden = true;
+  }
 }
 
 function applyStageSettings(settings: Settings): void {
@@ -62,22 +92,27 @@ function applyStageSettings(settings: Settings): void {
   const values = custom ?? evenStages(settings.timeoutMinutes);
   stageInputs.forEach((input, i) => { input.value = String(values[i]); });
   stageErrorEl.hidden = true;
+  refreshCustomStageAvailability();
 }
 
-/**
- * null means "use even fractions". Out-of-order values are surfaced rather than
- * quietly repaired — saveSettings would reject them anyway, and a silently
- * rewritten schedule is exactly the kind of lie the timeout field used to tell.
- */
+/** null means "use even fractions"; otherwise the raw numbers typed. */
 function readStageInputs(): number[] | null {
   if (!customStagesToggle.checked) return null;
   return stageInputs.map(input => Number(input.value));
 }
 
+/**
+ * Mirror of normalizeStageThresholds' rule, including the timeout ceiling, so
+ * the form blocks with a visible error instead of letting the backend silently
+ * discard the schedule to null under a "Saved" message.
+ */
 function stageInputsValid(): boolean {
   if (!customStagesToggle.checked) return true;
   const values = readStageInputs()!;
-  return values.every((v, i) => Number.isFinite(v) && v > 0 && (i === 0 || v > values[i - 1]));
+  const timeout = Number(timeoutInput.value) || 30;
+  return values.every((v, i) =>
+    Number.isFinite(v) && v > 0 && v < timeout && v <= 43200 && (i === 0 || v > values[i - 1]),
+  );
 }
 
 customStagesToggle.addEventListener('change', () => {
@@ -88,6 +123,10 @@ customStagesToggle.addEventListener('change', () => {
   }
   stageErrorEl.hidden = true;
 });
+
+// A timeout change can make custom stages unavailable, or move the ceiling the
+// stage values must sit under.
+timeoutInput.addEventListener('input', refreshCustomStageAvailability);
 
 async function loadSettings(): Promise<void> {
   applySettingsToForm(await browser.runtime.sendMessage({ type: 'GET_SETTINGS' }));

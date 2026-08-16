@@ -82,7 +82,7 @@ While Aging Tabs includes multiple safety nets (graveyard, notifications, lock, 
 
 ## Privacy
 
-All data stays in your browser. No accounts, no servers, no tracking, nothing sent anywhere. The only network request is re-fetching a tab's own favicon when it is hosted cross-origin and therefore unreadable from the page. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
+All data stays in your browser. No accounts, no servers, no tracking, nothing sent anywhere. The only network request is re-fetching a tab's own favicon to dim it, when that icon can't be read back from the page (a cross-origin/CDN icon, or the fallback `/favicon.ico`); it sends no cookies and won't reach private hosts. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
 
 ## License
 

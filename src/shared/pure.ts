@@ -39,13 +39,25 @@ export function computeAgingStage(
  * ambiguous is rejected outright rather than repaired: a silently corrected
  * threshold list would age tabs on a schedule the user never chose.
  */
-export function normalizeStageThresholds(input: unknown): number[] | null {
+export function normalizeStageThresholds(
+  input: unknown,
+  timeoutMinutes?: number,
+): number[] | null {
   if (!Array.isArray(input) || input.length !== MAX_STAGE) return null;
+
+  // A mark at or past the timeout is unreachable — the tab closes at the
+  // timeout before that stage could begin. Reject rather than accept a
+  // schedule with stages that never show.
+  const ceiling = typeof timeoutMinutes === 'number' && timeoutMinutes > 0
+    ? Math.min(MAX_TIMEOUT_MINUTES, timeoutMinutes)
+    : MAX_TIMEOUT_MINUTES;
+  const strictlyBelowCeiling = ceiling < MAX_TIMEOUT_MINUTES;
 
   let previous = 0;
   for (const value of input) {
     if (typeof value !== 'number' || !Number.isFinite(value)) return null;
-    if (value <= 0 || value > MAX_TIMEOUT_MINUTES) return null;
+    if (value <= 0) return null;
+    if (strictlyBelowCeiling ? value >= ceiling : value > ceiling) return null;
     if (value <= previous) return null; // must strictly ascend
     previous = value;
   }

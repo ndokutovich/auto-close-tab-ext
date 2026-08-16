@@ -20,9 +20,10 @@ export async function saveSettings(partial: Partial<Settings>): Promise<Settings
   const merged = { ...current, ...partial };
 
   // Enforce bounds to prevent abuse via crafted messages
+  const timeoutMinutes = Math.max(MIN_TIMEOUT_MINUTES, Math.min(MAX_TIMEOUT_MINUTES, Number(merged.timeoutMinutes) || current.timeoutMinutes));
   const updated: Settings = {
     ...merged,
-    timeoutMinutes: Math.max(MIN_TIMEOUT_MINUTES, Math.min(MAX_TIMEOUT_MINUTES, Number(merged.timeoutMinutes) || current.timeoutMinutes)),
+    timeoutMinutes,
     minTabCount: Math.max(0, Math.min(100, Number(merged.minTabCount) ?? current.minTabCount)),
     graveyardMaxSize: Math.max(0, Math.min(10000, Number(merged.graveyardMaxSize) ?? current.graveyardMaxSize)),
     graveyardRetentionDays: Math.max(0, Math.min(365, Number(merged.graveyardRetentionDays) || 0)),
@@ -30,7 +31,9 @@ export async function saveSettings(partial: Partial<Settings>): Promise<Settings
     faviconDimming: !!merged.faviconDimming,
     titlePrefix: !!merged.titlePrefix,
     titleBlink: !!merged.titleBlink,
-    stageThresholdMinutes: normalizeStageThresholds(merged.stageThresholdMinutes),
+    // Validated against the timeout being saved, so a stage that could never be
+    // reached before closure is rejected rather than stored.
+    stageThresholdMinutes: normalizeStageThresholds(merged.stageThresholdMinutes, timeoutMinutes),
     closeEmptyTabs: !!merged.closeEmptyTabs,
     protectGroupedTabs: !!merged.protectGroupedTabs,
     expireAction: merged.expireAction === 'discard' ? 'discard' : 'close',

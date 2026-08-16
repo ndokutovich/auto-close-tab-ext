@@ -8,6 +8,9 @@ let observer: MutationObserver | null = null;
 let ignoreNextMutation = false;
 let blinkInterval: ReturnType<typeof setInterval> | null = null;
 let blinkState = false;
+// Whether the static emoji prefix is currently wanted. Tracked so the title
+// MutationObserver reapplies the prefix only when it was actually enabled.
+let prefixEnabled = false;
 
 function applyPrefix(stage: AgingStage): void {
   const prefix = STAGE_PREFIX[stage];
@@ -69,7 +72,8 @@ function onTitleMutation(): void {
   const rawTitle = stripAgingPrefix(document.title);
   originalTitle = rawTitle;
 
-  if (currentStage > 0) {
+  // Only reassert a static prefix; while blinking, the interval owns the title.
+  if (currentStage > 0 && prefixEnabled && !blinkInterval) {
     applyPrefix(currentStage);
   }
 }
@@ -103,8 +107,12 @@ function setupObserver(): void {
   headObserver.observe(head, { childList: true });
 }
 
-export function handleTitleAging(stage: AgingStage, blink = false): void {
+export function handleTitleAging(
+  stage: AgingStage,
+  opts: { prefix: boolean; blink: boolean } = { prefix: true, blink: false },
+): void {
   currentStage = stage;
+  prefixEnabled = opts.prefix;
 
   if (stage === 0) {
     resetTitle();
@@ -117,18 +125,26 @@ export function handleTitleAging(stage: AgingStage, blink = false): void {
 
   setupObserver();
 
-  // Stages 3-4 pulse only when asked to. Without it the stage still shows, as a
-  // static emoji prefix — the same information without the movement.
-  if (blink && stage >= 3 && BLINK_SPEED[stage]) {
+  // Blink owns stages 3-4 when enabled — even without a static prefix, so the
+  // pulse is its own opt-in and not smuggled in behind titlePrefix.
+  if (opts.blink && stage >= 3 && BLINK_SPEED[stage]) {
     startBlink(stage);
   } else {
     stopBlink();
-    applyPrefix(stage);
+    // With no prefix and no blink at this stage there is nothing to show; make
+    // sure any earlier prefix is cleared rather than left frozen.
+    if (opts.prefix) {
+      applyPrefix(stage);
+    } else if (originalTitle !== null) {
+      ignoreNextMutation = true;
+      document.title = originalTitle;
+    }
   }
 }
 
 export function resetTitle(): void {
   currentStage = 0;
+  prefixEnabled = false;
   stopBlink();
   if (originalTitle !== null) {
     ignoreNextMutation = true;

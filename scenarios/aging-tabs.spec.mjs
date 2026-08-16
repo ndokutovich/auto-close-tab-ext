@@ -595,51 +595,138 @@ async function setSettings(partial) {
   await page.close();
 }
 
+/** Default settings the favicon scenarios must leave behind, whatever happens. */
+const DEFAULT_VISUAL_SETTINGS = {
+  timeoutMinutes: 30, minTabCount: 3,
+  faviconDimming: true, titlePrefix: false, titleBlink: false,
+  stageThresholdMinutes: null,
+};
+
 scenario('Title is left alone when titlePrefix is off', async () => {
-  const { sameOriginPage } = await startFaviconFixture();
-  await setSettings({ timeoutMinutes: 2, minTabCount: 0, titlePrefix: false, titleBlink: false, faviconDimming: true });
+  try {
+    const { sameOriginPage } = await startFaviconFixture();
+    await setSettings({ timeoutMinutes: 2, minTabCount: 0, titlePrefix: false, titleBlink: false, faviconDimming: true });
 
-  // Wait for dimming as the signal that aging really progressed — otherwise a
-  // passing title assertion would prove nothing but a stalled timer.
-  const res = await ageAndSample(sameOriginPage, s => s.dimmed);
-  const { last } = res;
+    // Wait for dimming as the signal that aging really progressed — otherwise a
+    // passing title assertion would prove nothing but a stalled timer.
+    const res = await ageAndSample(sameOriginPage, s => s.dimmed);
+    const { last } = res;
 
-  if (!last.dimmed) throw new Error(`Dimming never appeared (extension stages seen: ${JSON.stringify(res.seenStages)})`);
-  if (last.title !== 'Fixture Page') {
-    throw new Error(`titlePrefix is off, title must be untouched, got "${last.title}"`);
+    if (!last.dimmed) throw new Error(`Dimming never appeared (extension stages seen: ${JSON.stringify(res.seenStages)})`);
+    if (last.title !== 'Fixture Page') {
+      throw new Error(`titlePrefix is off, title must be untouched, got "${last.title}"`);
+    }
+  } finally {
+    closeTestServers();
+    await setSettings(DEFAULT_VISUAL_SETTINGS);
   }
-
-  closeTestServers();
 });
 
 scenario('Cross-origin favicons dim', async () => {
-  const { crossOriginPage } = await startFaviconFixture();
-  await setSettings({ timeoutMinutes: 2, minTabCount: 0, faviconDimming: true, titlePrefix: false, titleBlink: false });
+  try {
+    const { crossOriginPage } = await startFaviconFixture();
+    await setSettings({ timeoutMinutes: 2, minTabCount: 0, faviconDimming: true, titlePrefix: false, titleBlink: false });
 
-  const res = await ageAndSample(crossOriginPage, s => s.dimmed);
-  const { last } = res;
+    const res = await ageAndSample(crossOriginPage, s => s.dimmed);
+    const { last } = res;
 
-  if (!last.dimmed) {
-    if (!res.aged) throw new Error(`Tab never aged at all (stages: ${JSON.stringify(res.seenStages)})`);
-    throw new Error('Favicon served cross-origin without CORS never dimmed');
+    if (!last.dimmed) {
+      if (!res.aged) throw new Error(`Tab never aged at all (stages: ${JSON.stringify(res.seenStages)})`);
+      throw new Error('Favicon served cross-origin without CORS never dimmed');
+    }
+  } finally {
+    closeTestServers();
+    await setSettings(DEFAULT_VISUAL_SETTINGS);
   }
-
-  closeTestServers();
 });
 
 scenario('Favicon is left alone when dimming is off', async () => {
-  const { sameOriginPage } = await startFaviconFixture();
-  await setSettings({ timeoutMinutes: 2, minTabCount: 0, faviconDimming: false, titlePrefix: true, titleBlink: false });
+  try {
+    const { sameOriginPage } = await startFaviconFixture();
+    await setSettings({ timeoutMinutes: 2, minTabCount: 0, faviconDimming: false, titlePrefix: true, titleBlink: false });
 
-  // Here the title is the progress signal, since dimming is what we expect not to happen.
-  const res = await ageAndSample(sameOriginPage, s => s.title !== 'Fixture Page');
-  const { last } = res;
+    // Here the title is the progress signal, since dimming is what we expect not to happen.
+    const res = await ageAndSample(sameOriginPage, s => s.title !== 'Fixture Page');
+    const { last } = res;
 
-  if (last.title === 'Fixture Page') throw new Error(`Title never changed (stages: ${JSON.stringify(res.seenStages)})`);
-  if (last.dimmed) throw new Error('faviconDimming is off, the icon must be untouched');
+    if (last.title === 'Fixture Page') throw new Error(`Title never changed (stages: ${JSON.stringify(res.seenStages)})`);
+    if (last.dimmed) throw new Error('faviconDimming is off, the icon must be untouched');
+  } finally {
+    closeTestServers();
+    await setSettings(DEFAULT_VISUAL_SETTINGS);
+  }
+});
 
-  closeTestServers();
-  await setSettings({ timeoutMinutes: 30, minTabCount: 3, faviconDimming: true, titlePrefix: false, titleBlink: false });
+scenario('Turning a visual off repaints an already-aged tab', async () => {
+  try {
+    const { sameOriginPage } = await startFaviconFixture();
+    await setSettings({ timeoutMinutes: 2, minTabCount: 0, faviconDimming: true, titlePrefix: false, titleBlink: false });
+
+    // Age one tab until its icon is dimmed, then leave it open.
+    const page = await context.newPage();
+    await page.goto(sameOriginPage);
+    const parking = await context.newPage();
+    await parking.bringToFront();
+
+    let dimmed = false;
+    const deadline = Date.now() + 100000;
+    while (Date.now() < deadline) {
+      await parking.waitForTimeout(5000);
+      dimmed = (await readIconState(page)).dimmed;
+      if (dimmed) break;
+    }
+    if (!dimmed) throw new Error('Tab never dimmed — cannot test the toggle-off repaint');
+
+    // Now disable dimming. The background must push this to the painted tab
+    // without waiting for a stage change (which may never come).
+    await setSettings({ timeoutMinutes: 2, minTabCount: 0, faviconDimming: false, titlePrefix: false, titleBlink: false });
+    await parking.waitForTimeout(1500);
+
+    const after = await readIconState(page);
+    if (after.dimmed) {
+      throw new Error('Icon stayed dimmed after faviconDimming was turned off — repaint did not reach the tab');
+    }
+
+    await page.close();
+    await parking.close();
+  } finally {
+    closeTestServers();
+    await setSettings(DEFAULT_VISUAL_SETTINGS);
+  }
+});
+
+scenario('Title blink works without the title prefix', async () => {
+  try {
+    const { sameOriginPage } = await startFaviconFixture();
+    // Prefix off, blink ON — the previously-dead combination. faviconDimming on
+    // gives us a reliable progress signal.
+    await setSettings({ timeoutMinutes: 2, minTabCount: 0, faviconDimming: true, titlePrefix: false, titleBlink: true });
+
+    const page = await context.newPage();
+    await page.goto(sameOriginPage);
+    const parking = await context.newPage();
+    await parking.bringToFront();
+
+    // Blink toggles the title, so sample repeatedly and catch any non-clean frame.
+    let sawBlink = false;
+    let everDimmed = false;
+    const deadline = Date.now() + 110000;
+    while (Date.now() < deadline) {
+      await parking.waitForTimeout(1000);
+      const s = await readIconState(page);
+      everDimmed = everDimmed || s.dimmed;
+      if (s.title !== 'Fixture Page') { sawBlink = true; break; }
+    }
+
+    if (!everDimmed && !sawBlink) throw new Error('Tab never aged — cannot judge blink');
+    if (!sawBlink) throw new Error('titleBlink is on with prefix off, but the title never pulsed');
+
+    await page.close();
+    await parking.close();
+  } finally {
+    closeTestServers();
+    await setSettings(DEFAULT_VISUAL_SETTINGS);
+  }
 });
 
 scenario('Custom stage timings round-trip', async () => {

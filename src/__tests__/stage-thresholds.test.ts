@@ -93,4 +93,18 @@ describe('normalizeStageThresholds', () => {
   it('caps values at the maximum timeout — a mark past it is unreachable anyway', () => {
     expect(normalizeStageThresholds([1, 2, 3, 999_999])).toBeNull();
   });
+
+  it('rejects marks at or beyond the configured timeout', () => {
+    // With a 10-minute timeout the tab closes at minute 10, so a stage that
+    // would begin at 10 (or 15) can never be seen — reject the whole list
+    // rather than accept a schedule with unreachable stages.
+    expect(normalizeStageThresholds([3, 5, 10, 15], 10)).toBeNull();
+    expect(normalizeStageThresholds([3, 5, 8, 9], 10)).toEqual([3, 5, 8, 9]);
+    expect(normalizeStageThresholds([3, 5, 10, 12], 10)).toBeNull();
+  });
+
+  it('ignores the timeout argument when it is not a positive number', () => {
+    expect(normalizeStageThresholds([3, 5, 10, 15], 0)).toEqual([3, 5, 10, 15]);
+    expect(normalizeStageThresholds([3, 5, 10, 15], undefined)).toEqual([3, 5, 10, 15]);
+  });
 });
