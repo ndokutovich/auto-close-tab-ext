@@ -105,14 +105,18 @@ function visualsOf(settings: Settings): AgingVisuals {
 }
 
 // Serialize every aging pass. The alarm and a settings-triggered refresh both
-// mutate shared tab-stage state across await points; without this they could
-// interleave, one using stale settings and overwriting or closing what the
+// mutate shared tab-stage state across await points (and the paused repaint
+// sends messages that must not interleave with a concurrent pass); without this
+// they could interleave, one using stale settings and overwriting what the
 // other just decided.
 let agingChain: Promise<void> = Promise.resolve();
-function runAgingExclusive(settings: Settings, opts: { force: boolean; closeExpired: boolean }): Promise<void> {
-  const task = agingChain.then(() => applyAging(settings, opts));
+function serializeAging(fn: () => Promise<void>): Promise<void> {
+  const task = agingChain.then(fn);
   agingChain = task.catch(() => {}); // never break the chain on error
   return task;
+}
+function runAgingExclusive(settings: Settings, opts: { force: boolean; closeExpired: boolean }): Promise<void> {
+  return serializeAging(() => applyAging(settings, opts));
 }
 
 /**
@@ -247,8 +251,9 @@ export async function refreshVisualsForAllTabs(): Promise<void> {
     // Aging is frozen, so elapsed time is meaningless — repaint each tab at its
     // stored (frozen) stage with the new visuals, rather than skip. Without
     // this, disabling a visual while paused leaves painted tabs stuck until an
-    // unpause plus a later stage transition.
-    await repaintFrozenVisuals(settings);
+    // unpause plus a later stage transition. Serialized so it cannot interleave
+    // with a concurrent aging pass.
+    await serializeAging(() => repaintFrozenVisuals(settings));
     return;
   }
   await runAgingExclusive(settings, { force: true, closeExpired: false });
@@ -259,10 +264,14 @@ async function repaintFrozenVisuals(settings: Settings): Promise<void> {
   const timeoutMs = settings.timeoutMinutes * 60 * 1000;
   const allTabs = await browser.tabs.query({});
   const tabMap = new Map(allTabs.map(t => [t.id!, t]));
+  const immunityCtx = buildImmunityContext(settings, allTabs, await getLockedTabs());
   for (const tabId of getAllTrackedTabIds()) {
     const tab = tabMap.get(tabId);
     if (!tab || tab.discarded) continue;
-    sendAgingUpdate(tabId, getStage(tabId), timeoutMs, visuals);
+    // An immune tab (pinned/locked/whitelisted while paused) must show clean,
+    // not its frozen aged stage — send stage 0 for it.
+    const stage = isImmune(tab, immunityCtx) ? 0 : getStage(tabId);
+    sendAgingUpdate(tabId, stage, timeoutMs, visuals);
   }
 }
 

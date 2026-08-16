@@ -116,12 +116,25 @@ const rawFaviconCache = new Map<string, string>();
 // churns favicon URLs cannot retain unbounded ~1 MB entries.
 const RAW_FAVICON_CACHE_MAX = 8;
 function cacheRawFavicon(url: string, dataUrl: string): void {
-  if (rawFaviconCache.size >= RAW_FAVICON_CACHE_MAX) {
-    // Evict the oldest (Map preserves insertion order).
-    const oldest = rawFaviconCache.keys().next().value;
+  // Updating an existing key must not evict a different entry — delete then set
+  // refreshes its recency without changing the count. Only a genuinely new key
+  // at capacity evicts, and it evicts exactly one.
+  if (rawFaviconCache.has(url)) {
+    rawFaviconCache.delete(url);
+  } else if (rawFaviconCache.size >= RAW_FAVICON_CACHE_MAX) {
+    const oldest = rawFaviconCache.keys().next().value; // Map preserves order
     if (oldest !== undefined) rawFaviconCache.delete(oldest);
   }
   rawFaviconCache.set(url, dataUrl);
+}
+/** Read a cached favicon and refresh its recency (move to newest). */
+function getCachedRawFavicon(url: string): string | undefined {
+  const hit = rawFaviconCache.get(url);
+  if (hit !== undefined) {
+    rawFaviconCache.delete(url);
+    rawFaviconCache.set(url, hit);
+  }
+  return hit;
 }
 // Source URLs the background could not fetch (dead /favicon.ico guesses, blocked
 // hosts) — remembered so every stage change does not retry a doomed request.
@@ -153,7 +166,7 @@ async function requestFaviconViaBackground(
   gen: number,
 ): Promise<void> {
   if (faviconUnfetchable.has(url)) return; // known dead — don't retry
-  const cached = rawFaviconCache.get(url);
+  const cached = getCachedRawFavicon(url);
   if (cached) { drawFromRaw(cached, percentage, gen); return; }
 
   try {

@@ -174,11 +174,35 @@ describe('browser downtime compensation', () => {
     // timers; charging them could close everything on the first launch. With no
     // evidence, treat the restart as a fresh start and reset to now.
     seedTab(1, 30 * DAY);
+    store['tabStages'] = { 1: 4 }; // was showing terminal aging before
 
     const tracker = await loadTracker(1);
     await tracker.initTracker();
 
     const elapsed = Date.now() - tracker.getLastAccessed(1)!;
+    expect(elapsed).toBeLessThan(1000);
+    // Stage must be reset with the time, or a fresh timer would still display
+    // as terminal on the next paint.
+    expect(tracker.getStage(1)).toBe(0);
+  });
+
+  it('grace also resets an open tab that was missing from storage', async () => {
+    // No persisted entry for this tab (created while disabled, or a missed
+    // write), but it is open with an old lastAccessed. Under grace it must be
+    // treated as fresh, not charged its stale lastAccessed while peers reset.
+    store['tabTimes'] = {};
+    store['tabStages'] = {};
+    // no heartbeat, session marker absent => genuine restart => grace
+
+    const tracker = await import('../background/tab-tracker');
+    const browser = (await import('webextension-polyfill')).default;
+    vi.mocked(browser.tabs.query).mockResolvedValue([
+      { id: 9, active: false, pinned: false, url: 'https://a.com', lastAccessed: Date.now() - 30 * DAY } as any,
+    ]);
+
+    await tracker.initTracker();
+
+    const elapsed = Date.now() - tracker.getLastAccessed(9)!;
     expect(elapsed).toBeLessThan(1000);
   });
 

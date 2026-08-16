@@ -47,7 +47,7 @@ export async function initTracker(freshInstall = false): Promise<void> {
 
   // Give back the time the tabs were not actually being neglected, before any
   // of it can be charged against them.
-  await compensateInactiveTime(Date.now());
+  const graced = await compensateInactiveTime(Date.now());
 
   // Reconcile with currently open tabs
   const tabs = await browser.tabs.query({});
@@ -62,10 +62,12 @@ export async function initTracker(freshInstall = false): Promise<void> {
     }
   }
 
-  // Add entries for tabs we don't know about
-  // On fresh install: reset ALL tabs to now (grace period — don't kill existing tabs)
+  // Add entries for tabs we don't know about.
+  // Fresh install OR a no-heartbeat grace-reset: reset ALL open tabs to now, so
+  // an open tab that was missing from storage is not charged its old
+  // lastAccessed while its persisted peers were graced to now.
   const now = Date.now();
-  if (freshInstall) {
+  if (freshInstall || graced) {
     for (const tab of tabs) {
       if (tab.id !== undefined) {
         tabTimes[tab.id] = now;
@@ -160,13 +162,19 @@ async function isSystemIdle(): Promise<boolean> {
  * Applying more than one would shift twice, so the widest pending span wins and
  * the narrower ones stand down.
  */
-async function compensateInactiveTime(now: number): Promise<void> {
+/**
+ * Returns true when it grace-reset the tracked tabs (treat the startup as a
+ * fresh start). initTracker uses that to also assign `now` to open tabs that
+ * were not in persisted storage — otherwise those would keep their old
+ * `tab.lastAccessed` and could expire while their persisted peers were reset.
+ */
+async function compensateInactiveTime(now: number): Promise<boolean> {
   // Always consume the marker, even on paths that shift nothing — leaving it
   // unset would make the next service-worker recycle look like a restart.
   const browserRestarted = await consumeBrowserSessionMarker();
 
   // Pause settles its own span on unpause, downtime inside it included.
-  if (pausedSince !== null) return;
+  if (pausedSince !== null) return false;
 
   if (idleSince !== null) {
     applyShift(now - idleSince, now);
@@ -180,12 +188,12 @@ async function compensateInactiveTime(now: number): Promise<void> {
     } else {
       await browser.storage.local.set({ [STORAGE_KEYS.IDLE_SINCE]: idleSince });
     }
-    return;
+    return false;
   }
 
   // Only a genuine browser restart can have produced downtime. A recycled
   // service worker inside a live browser has not missed any real time.
-  if (!browserRestarted) return;
+  if (!browserRestarted) return false;
 
   const lastTick = await getLastTickAt();
   if (lastTick === null) {
@@ -193,16 +201,18 @@ async function compensateInactiveTime(now: number): Promise<void> {
     // tracked yet — reset is a no-op) or an upgrade from a version without the
     // heartbeat, carrying stale wall-clock timers. We cannot measure the
     // downtime, so treat it as a fresh start and reset tracked tabs to now
-    // rather than charge a possibly week-long absence against them.
+    // (times AND stages) rather than charge a possibly week-long absence.
     for (const id of Object.keys(tabTimes)) {
       tabTimes[Number(id)] = now;
+      tabStages[Number(id)] = 0;
     }
     dirty = true;
-    return;
+    return true;
   }
   const downtime = now - lastTick;
-  if (downtime < DOWNTIME_THRESHOLD_MS) return; // shut down and reopened at once
+  if (downtime < DOWNTIME_THRESHOLD_MS) return false; // shut down and reopened at once
   applyShift(downtime, now);
+  return false;
 }
 
 // --- Pause API ---

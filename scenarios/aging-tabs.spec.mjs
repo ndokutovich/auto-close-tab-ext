@@ -706,21 +706,38 @@ scenario('Title blink works without the title prefix', async () => {
     await page.goto(sameOriginPage);
     const parking = await context.newPage();
     await parking.bringToFront();
+    const probe = await openOptions();
 
-    // Blink toggles the title, so sample repeatedly and catch any non-clean frame.
+    // Phase 1 — confirm the tab actually aged to a blinking stage (>=3), using
+    // the extension's own stage as the signal. Separates "did not age" (an
+    // environment/idle stall) from "aged but did not blink" (the real thing).
+    let maxStage = 0;
+    const ageDeadline = Date.now() + 115000;
+    while (Date.now() < ageDeadline && maxStage < 3) {
+      await parking.waitForTimeout(2000);
+      const states = await probe.evaluate(async () => {
+        try { return await browser.runtime.sendMessage({ type: 'GET_TAB_STATES' }); } catch { return null; }
+      });
+      const stages = states ? Object.values(states).map(s => s.stage) : [];
+      maxStage = Math.max(maxStage, ...stages, 0);
+    }
+    if (maxStage < 3) throw new Error(`Tab never reached a blinking stage (max stage ${maxStage}) — aging stalled`);
+
+    // Phase 2 — now at stage >=3, sample the title fast for a pulsed frame.
+    // Stage-3 blink is a 2s period at 50% duty, so a few seconds at 200ms will
+    // land on the non-clean frame.
     let sawBlink = false;
-    let everDimmed = false;
-    const deadline = Date.now() + 110000;
-    while (Date.now() < deadline) {
-      await parking.waitForTimeout(1000);
-      const s = await readIconState(page);
-      everDimmed = everDimmed || s.dimmed;
-      if (s.title !== 'Fixture Page') { sawBlink = true; break; }
+    const blinkDeadline = Date.now() + 8000;
+    while (Date.now() < blinkDeadline) {
+      await parking.waitForTimeout(200);
+      let title = 'Fixture Page';
+      try { title = await page.evaluate(() => document.title); } catch { break; }
+      if (title !== 'Fixture Page') { sawBlink = true; break; }
     }
 
-    if (!everDimmed && !sawBlink) throw new Error('Tab never aged — cannot judge blink');
-    if (!sawBlink) throw new Error('titleBlink is on with prefix off, but the title never pulsed');
+    if (!sawBlink) throw new Error('titleBlink is on with prefix off, but the title never pulsed at stage 3+');
 
+    await probe.close();
     await page.close();
     await parking.close();
   } finally {
