@@ -1,22 +1,17 @@
 /**
- * BUG REPRO (GitHub issue #1): time spent with the browser CLOSED was counted
- * as tab aging.
+ * Startup reconciliation of aging state (GitHub issue #1 and its follow-ups).
  *
- * The extension deliberately ages tabs by *active* time, not wall-clock time —
- * see the idle compensation in tab-tracker (`shiftTabTimes` on idle -> active).
- * But that compensation only covers downtime the browser was alive to observe.
- * When the browser is shut down entirely, no events fire, while `tabTimes`
- * holds wall-clock timestamps. On the next launch the whole offline period had
- * already been charged against every tab, so a machine used once a week found
- * every tab expired on startup.
+ * The extension ages tabs by *active* browsing time, not wall-clock time. The
+ * trust boundary is the browser session, detected by a storage.session marker
+ * that survives a service-worker recycle but not a browser restart:
  *
- * The fix persists a heartbeat (`lastTickAt`) on each alarm tick. On startup
- * the gap since the last heartbeat is treated exactly like idle time and fed
- * through the same `shiftTabTimes` machinery.
- *
- * Double-compensation guards: pause and idle already account for their own
- * spans, and both subsume the downtime, so the heartbeat shift must stand down
- * when either is pending.
+ *   - Recycle (marker present): the browser never closed, tab ids are stable,
+ *     persisted per-id timers/stages/locks still refer to the same tabs. A
+ *     pending idle span is given back; pause settles on unpause.
+ *   - Restart (marker absent): a new session. Tab ids are reassigned on restore,
+ *     so persisted per-id state may point at unrelated tabs. We start fresh —
+ *     reset every tracked tab to now/stage-0 and clear locks — which also makes
+ *     a long absence safe (issue #1). The user's pause intent is preserved.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
@@ -105,10 +100,10 @@ async function loadTracker(tabId: number) {
   return tracker;
 }
 
-describe('browser downtime compensation', () => {
+describe('startup reconciliation', () => {
   beforeEach(() => {
     for (const key of Object.keys(store)) delete store[key];
-    // Empty session store == the browser just started.
+    // Empty session store == the browser just started (restart).
     for (const key of Object.keys(sessionStore)) delete sessionStore[key];
     idleState = 'active';
     vi.clearAllMocks();
@@ -119,80 +114,38 @@ describe('browser downtime compensation', () => {
     vi.restoreAllMocks();
   });
 
-  it('does not age tabs while the browser is closed', async () => {
-    // Browser was down for 10 minutes: last heartbeat and last tab touch both
-    // 10 minutes old. Active elapsed at shutdown was ~0.
-    seedTab(1, 10 * MINUTE);
-    store['lastTickAt'] = Date.now() - 10 * MINUTE;
+  // --- Browser restart (session marker absent): fresh start, no per-id trust ---
 
-    const tracker = await loadTracker(1);
-    await tracker.initTracker();
-
-    const elapsed = Date.now() - tracker.getLastAccessed(1)!;
-    expect(elapsed).toBeLessThan(500);
-  });
-
-  it('preserves elapsed active time accumulated before shutdown', async () => {
-    // Tab untouched for 25 minutes, but the browser only ran for the first 5 —
-    // it went down 20 minutes ago. Active elapsed must stay ~5 minutes.
-    seedTab(1, 25 * MINUTE);
-    store['lastTickAt'] = Date.now() - 20 * MINUTE;
-
-    const tracker = await loadTracker(1);
-    await tracker.initTracker();
-
-    const elapsed = Date.now() - tracker.getLastAccessed(1)!;
-    expect(Math.abs(elapsed - 5 * MINUTE)).toBeLessThan(500);
-  });
-
-  it('compensates a month-long absence (issue #1 scenario)', async () => {
-    // The reporter's machine: untouched for 30 days, browser down for all of it.
+  it('resets tab timers on a browser restart', async () => {
+    // ids are reassigned on restore, so a persisted per-id timer may now point
+    // at an unrelated tab. Do not trust it — reset to now (and stage 0).
     seedTab(1, 30 * DAY);
-    store['lastTickAt'] = Date.now() - 30 * DAY;
-
-    const tracker = await loadTracker(1);
-    await tracker.initTracker();
-
-    const elapsed = Date.now() - tracker.getLastAccessed(1)!;
-    expect(elapsed).toBeLessThan(500);
-  });
-
-  it('ignores sub-threshold gaps (normal service-worker churn)', async () => {
-    // A gap of one alarm interval is ordinary MV3 SW sleep, not downtime.
-    const touched = seedTab(1, 5 * MINUTE);
-    store['lastTickAt'] = Date.now() - 30_000;
-
-    const tracker = await loadTracker(1);
-    await tracker.initTracker();
-
-    expect(tracker.getLastAccessed(1)).toBe(touched);
-  });
-
-  it('grace-resets pre-existing timers when there is no heartbeat (upgrade)', async () => {
-    // No heartbeat means we cannot know how long the browser was down. An
-    // upgrade from a version without the heartbeat carries stale wall-clock
-    // timers; charging them could close everything on the first launch. With no
-    // evidence, treat the restart as a fresh start and reset to now.
-    seedTab(1, 30 * DAY);
-    store['tabStages'] = { 1: 4 }; // was showing terminal aging before
+    store['tabStages'] = { 1: 4 };
 
     const tracker = await loadTracker(1);
     await tracker.initTracker();
 
     const elapsed = Date.now() - tracker.getLastAccessed(1)!;
     expect(elapsed).toBeLessThan(1000);
-    // Stage must be reset with the time, or a fresh timer would still display
-    // as terminal on the next paint.
     expect(tracker.getStage(1)).toBe(0);
   });
 
-  it('grace also resets an open tab that was missing from storage', async () => {
-    // No persisted entry for this tab (created while disabled, or a missed
-    // write), but it is open with an old lastAccessed. Under grace it must be
-    // treated as fresh, not charged its stale lastAccessed while peers reset.
+  it('a month-long absence does not close tabs on restart (issue #1)', async () => {
+    seedTab(1, 30 * DAY);
+
+    const tracker = await loadTracker(1);
+    await tracker.initTracker();
+
+    const elapsed = Date.now() - tracker.getLastAccessed(1)!;
+    expect(elapsed).toBeLessThan(1000);
+  });
+
+  it('resets an open tab missing from storage on restart', async () => {
+    // No persisted entry (created while disabled, or a missed write), open with
+    // an old lastAccessed. Under a fresh-start restart it must be reset too, not
+    // charged its stale lastAccessed while persisted peers reset.
     store['tabTimes'] = {};
     store['tabStages'] = {};
-    // no heartbeat, session marker absent => genuine restart => grace
 
     const tracker = await import('../background/tab-tracker');
     const browser = (await import('webextension-polyfill')).default;
@@ -206,25 +159,45 @@ describe('browser downtime compensation', () => {
     expect(elapsed).toBeLessThan(1000);
   });
 
-  it('does not grace-reset a mere service-worker recycle with no heartbeat', async () => {
-    // Same "no heartbeat" state, but the session marker proves the browser
-    // never closed — so there is nothing to compensate and no reset.
-    const touched = seedTab(1, 10 * MINUTE);
-    sessionStore['swSessionAlive'] = true;
+  it('clears locks on a browser restart (lock keyed by ephemeral id)', async () => {
+    // A restored tab could reuse a formerly-locked id and inherit its lock,
+    // becoming immune forever. Locks cannot be re-mapped across a restart.
+    seedTab(1, 5 * MINUTE);
+    store['lockedTabs'] = [1, 42];
 
     const tracker = await loadTracker(1);
     await tracker.initTracker();
 
-    expect(tracker.getLastAccessed(1)).toBe(touched);
+    expect(store['lockedTabs']).toEqual([]);
   });
 
-  it('an overdue startup alarm compensates before overwriting the heartbeat', async () => {
-    // BUG (shipped v1.3.0): onAlarmFired wrote lastTickAt=now BEFORE ensureReady,
-    // so a persisted missed alarm firing at startup erased the downtime evidence
-    // that init had not yet read — and a week-away machine closed its tabs.
+  it('clears a stale idle marker on restart', async () => {
+    seedTab(1, HOUR);
+    store['idleSince'] = Date.now() - 2 * HOUR;
+
+    const tracker = await loadTracker(1);
+    await tracker.initTracker();
+
+    expect(store['idleSince']).toBeUndefined();
+    expect(tracker.getIdleSinceInternal()).toBeNull();
+  });
+
+  it('keeps the user pause intent across a restart but still resets timers', async () => {
     seedTab(1, 30 * DAY);
-    store['lastTickAt'] = Date.now() - 30 * DAY;
-    // session marker absent => genuine restart
+    store['pausedSince'] = Date.now() - 2 * HOUR;
+
+    const tracker = await loadTracker(1);
+    await tracker.initTracker();
+
+    expect(tracker.isPaused()).toBe(true);          // pause survives the restart
+    const elapsed = Date.now() - tracker.getLastAccessed(1)!;
+    expect(elapsed).toBeLessThan(1000);             // but timers are fresh
+  });
+
+  it('an alarm at startup on a fresh session resets rather than charges', async () => {
+    // A persisted, overdue alarm can fire at startup. It must not age tabs on
+    // the stale timers — init runs first and resets.
+    seedTab(1, 30 * DAY);
 
     const { onAlarmFired } = await import('../background/timer-manager');
     const tracker = await import('../background/tab-tracker');
@@ -236,112 +209,108 @@ describe('browser downtime compensation', () => {
     await onAlarmFired({ name: 'aging-tabs-check' } as any);
 
     const elapsed = Date.now() - tracker.getLastAccessed(1)!;
-    expect(elapsed).toBeLessThan(1000); // compensated, not charged 30 days
+    expect(elapsed).toBeLessThan(1000);
   });
 
-  it('stands down while paused — pause accounting already covers the gap', async () => {
-    // Paused 2 hours ago, browser down for 1 hour of that. Unpausing shifts by
-    // the full pause span; an extra downtime shift would double-count.
-    const touched = seedTab(1, 3 * HOUR);
-    store['pausedSince'] = Date.now() - 2 * HOUR;
-    store['lastTickAt'] = Date.now() - 1 * HOUR;
+  // --- Service-worker recycle (marker present): live session, ids stable ---
+
+  it('preserves timers on a service-worker recycle', async () => {
+    const touched = seedTab(1, 2 * HOUR);
+    sessionStore['swSessionAlive'] = true;
 
     const tracker = await loadTracker(1);
     await tracker.initTracker();
 
     expect(tracker.getLastAccessed(1)).toBe(touched);
-
-    await tracker.setPause(false);
-
-    // Only the 1 hour of active time before the pause should remain.
-    const elapsed = Date.now() - tracker.getLastAccessed(1)!;
-    expect(Math.abs(elapsed - 1 * HOUR)).toBeLessThan(500);
   });
 
-  it('stands down while idle is pending — the idle span subsumes the downtime', async () => {
-    // System went idle 3 hours ago, browser closed 1 hour ago. The idle span
-    // already covers the downtime; shifting by both would over-compensate.
-    seedTab(1, 4 * HOUR);
-    store['idleSince'] = Date.now() - 3 * HOUR;
-    store['lastTickAt'] = Date.now() - 1 * HOUR;
+  it('preserves locks on a service-worker recycle', async () => {
+    seedTab(1, 5 * MINUTE);
+    store['lockedTabs'] = [1];
+    sessionStore['swSessionAlive'] = true;
 
     const tracker = await loadTracker(1);
     await tracker.initTracker();
 
-    // Only the 1 active hour before going idle should remain.
-    const elapsed = Date.now() - tracker.getLastAccessed(1)!;
-    expect(Math.abs(elapsed - 1 * HOUR)).toBeLessThan(500);
+    expect(store['lockedTabs']).toEqual([1]);
   });
 
-  it('clears a settled idle span when the system is active on startup', async () => {
+  it('compensates a pending idle span on recycle', async () => {
+    // System went idle 3 hours ago inside a live browser; on recycle the idle
+    // span is given back (tab looks freshly accessed).
+    seedTab(1, 4 * HOUR);
+    store['idleSince'] = Date.now() - 3 * HOUR;
+    sessionStore['swSessionAlive'] = true;
+    idleState = 'active';
+
+    const tracker = await loadTracker(1);
+    await tracker.initTracker();
+
+    // The 3h idle span is shifted away; ~1h of pre-idle active time remains.
+    const elapsed = Date.now() - tracker.getLastAccessed(1)!;
+    expect(Math.abs(elapsed - 1 * HOUR)).toBeLessThan(1000);
+  });
+
+  it('clears a settled idle span when the system is active on recycle', async () => {
     idleState = 'active';
     seedTab(1, 2 * HOUR);
     store['idleSince'] = Date.now() - 1 * HOUR;
+    sessionStore['swSessionAlive'] = true;
 
     const tracker = await loadTracker(1);
     await tracker.initTracker();
 
-    // Consumed on startup — a stale marker would over-shift the next idle cycle.
     expect(store['idleSince']).toBeUndefined();
     expect(tracker.getIdleSinceInternal()).toBeNull();
   });
 
-  it('re-arms the idle span when the system is still idle on startup', async () => {
+  it('re-arms the idle span when the system is still idle on recycle', async () => {
     idleState = 'idle';
     seedTab(1, 2 * HOUR);
     store['idleSince'] = Date.now() - 1 * HOUR;
+    sessionStore['swSessionAlive'] = true;
 
     const tracker = await loadTracker(1);
     await tracker.initTracker();
 
-    // Still idle: the marker must restart from now so the ongoing idle period
-    // is compensated on the next active transition, without recounting.
     const armed = tracker.getIdleSinceInternal();
     expect(armed).not.toBeNull();
-    expect(Math.abs(Date.now() - armed!)).toBeLessThan(500);
+    expect(Math.abs(Date.now() - armed!)).toBeLessThan(1000);
   });
 
-  it('compensates an idle span longer than a day (24h cap regression)', async () => {
-    // The old MAX_IDLE_SHIFT of 24h truncated the shift, so a week-long absence
-    // still aged tabs by 6 days.
+  it('compensates an idle span longer than a day on recycle', async () => {
     seedTab(1, 7 * DAY);
     store['idleSince'] = Date.now() - 7 * DAY;
+    sessionStore['swSessionAlive'] = true;
+    idleState = 'active';
 
     const tracker = await loadTracker(1);
     await tracker.initTracker();
 
     const elapsed = Date.now() - tracker.getLastAccessed(1)!;
-    expect(elapsed).toBeLessThan(500);
+    expect(elapsed).toBeLessThan(1000);
   });
 
-  it('ignores the gap when only the service worker recycled', async () => {
-    // REGRESSION GUARD: MV3 tears the SW down every ~30s of inactivity, and a
-    // throttled alarm can leave a wide heartbeat gap inside a browser that
-    // never closed. Treating that as downtime would hand time back on every
-    // wake-up and stall aging entirely.
-    const touched = seedTab(1, 2 * HOUR);
-    store['lastTickAt'] = Date.now() - 1 * HOUR;
-    sessionStore['swSessionAlive'] = true; // browser session still alive
+  it('stands down while paused on recycle, settling on unpause', async () => {
+    const touched = seedTab(1, 3 * HOUR);
+    store['pausedSince'] = Date.now() - 2 * HOUR;
+    sessionStore['swSessionAlive'] = true;
 
     const tracker = await loadTracker(1);
     await tracker.initTracker();
 
-    expect(tracker.getLastAccessed(1)).toBe(touched);
+    expect(tracker.getLastAccessed(1)).toBe(touched); // frozen while paused
+
+    await tracker.setPause(false);
+    // ~1h of pre-pause active time remains after the pause span is given back.
+    const elapsed = Date.now() - tracker.getLastAccessed(1)!;
+    expect(Math.abs(elapsed - 1 * HOUR)).toBeLessThan(1000);
   });
+
+  // --- Session marker plumbing ---
 
   it('arms the session marker so the next recycle is not mistaken for a restart', async () => {
     seedTab(1, 10 * MINUTE);
-    store['lastTickAt'] = Date.now() - 10 * MINUTE;
-
-    const tracker = await loadTracker(1);
-    await tracker.initTracker();
-
-    expect(sessionStore['swSessionAlive']).toBe(true);
-  });
-
-  it('arms the session marker even when paused shifts nothing', async () => {
-    store['pausedSince'] = Date.now() - HOUR;
-    seedTab(1, 2 * HOUR);
 
     const tracker = await loadTracker(1);
     await tracker.initTracker();
@@ -352,58 +321,13 @@ describe('browser downtime compensation', () => {
   it('survives a missing idle API (Safari has no idle permission)', async () => {
     const browser = (await import('webextension-polyfill')).default;
     (browser as any).idle = undefined;
+    sessionStore['swSessionAlive'] = true;
 
-    seedTab(1, 10 * MINUTE);
-    store['lastTickAt'] = Date.now() - 10 * MINUTE;
+    const touched = seedTab(1, 10 * MINUTE);
 
     const tracker = await loadTracker(1);
     await expect(tracker.initTracker()).resolves.not.toThrow();
 
-    const elapsed = Date.now() - tracker.getLastAccessed(1)!;
-    expect(elapsed).toBeLessThan(500);
-  });
-});
-
-describe('heartbeat persistence', () => {
-  beforeEach(() => {
-    for (const key of Object.keys(store)) delete store[key];
-    // Empty session store == the browser just started.
-    for (const key of Object.keys(sessionStore)) delete sessionStore[key];
-    idleState = 'active';
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
-
-  it('records a heartbeat on every aging alarm tick', async () => {
-    const { onAlarmFired } = await import('../background/timer-manager');
-    const browser = (await import('webextension-polyfill')).default;
-    vi.mocked(browser.tabs.query).mockResolvedValue([]);
-
-    await onAlarmFired({ name: 'aging-tabs-check' } as any);
-
-    expect(typeof store['lastTickAt']).toBe('number');
-    expect(Math.abs(Date.now() - (store['lastTickAt'] as number))).toBeLessThan(1000);
-  });
-
-  it('records a heartbeat even while paused', async () => {
-    // Downtime detection must work across a pause, so the heartbeat cannot sit
-    // behind the pause gate.
-    store['pausedSince'] = Date.now() - HOUR;
-
-    const { onAlarmFired } = await import('../background/timer-manager');
-    const browser = (await import('webextension-polyfill')).default;
-    vi.mocked(browser.tabs.query).mockResolvedValue([]);
-
-    await onAlarmFired({ name: 'aging-tabs-check' } as any);
-
-    expect(typeof store['lastTickAt']).toBe('number');
-  });
-
-  it('does not record a heartbeat for unrelated alarms', async () => {
-    const { onAlarmFired } = await import('../background/timer-manager');
-
-    await onAlarmFired({ name: 'clear-notif-abc' } as any);
-
-    expect(store['lastTickAt']).toBeUndefined();
+    expect(tracker.getLastAccessed(1)).toBe(touched);
   });
 });

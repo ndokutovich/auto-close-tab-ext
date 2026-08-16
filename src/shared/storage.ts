@@ -131,25 +131,6 @@ export async function setPausedSince(value: number | null): Promise<void> {
   }
 }
 
-// --- Heartbeat ---
-//
-// Written on every aging alarm tick. The gap between the last heartbeat and
-// startup is time the browser was not running — see compensateInactiveTime.
-
-export async function getLastTickAt(): Promise<number | null> {
-  try {
-    const result = await browser.storage.local.get(STORAGE_KEYS.LAST_TICK_AT);
-    const value = result[STORAGE_KEYS.LAST_TICK_AT];
-    return typeof value === 'number' && Number.isFinite(value) ? value : null;
-  } catch {
-    return null;
-  }
-}
-
-export async function setLastTickAt(value: number): Promise<void> {
-  await browser.storage.local.set({ [STORAGE_KEYS.LAST_TICK_AT]: value });
-}
-
 // --- Locked tabs ---
 
 export async function getLockedTabs(): Promise<number[]> {

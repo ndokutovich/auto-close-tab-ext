@@ -5,6 +5,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const store: Record<string, unknown> = {};
+const sessionStore: Record<string, unknown> = {};
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v));
 
 vi.mock('webextension-polyfill', () => ({
@@ -30,6 +31,15 @@ vi.mock('webextension-polyfill', () => ({
           for (const k of list) delete store[k];
         }),
       },
+      // Marker present == browser alive (these are in-session pause/unpause
+      // tests). Without it, startup reconciliation would treat every init as a
+      // browser restart and grace-reset the seeded timers.
+      session: {
+        get: vi.fn(async (key: string) => (key in sessionStore ? { [key]: sessionStore[key] } : {})),
+        set: vi.fn(async (items: Record<string, unknown>) => {
+          for (const [k, v] of Object.entries(items)) sessionStore[k] = v;
+        }),
+      },
     },
     tabs: {
       query: vi.fn(async () => []),
@@ -42,6 +52,8 @@ vi.mock('webextension-polyfill', () => ({
 describe('pause integration', () => {
   beforeEach(() => {
     for (const key of Object.keys(store)) delete store[key];
+    for (const key of Object.keys(sessionStore)) delete sessionStore[key];
+    sessionStore['swSessionAlive'] = true;
     vi.resetModules();
   });
 

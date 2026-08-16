@@ -3,7 +3,7 @@ import type { AgingStage, BgToContentMsg, Settings } from '../shared/types';
 import { ALARM_NAME, CHECK_INTERVAL_SECONDS, MAX_STAGE } from '../shared/constants';
 import { computeAgingStage, extractDomain, stripAgingPrefix } from '../shared/pure';
 import { msg } from '../shared/i18n';
-import { getSettings, getGraveyard, getLockedTabs, setLastTickAt } from '../shared/storage';
+import { getSettings, getGraveyard, getLockedTabs } from '../shared/storage';
 import {
   ensureReady,
   getAllTrackedTabIds,
@@ -73,12 +73,7 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
 
   if (alarm.name !== ALARM_NAME) return;
 
-  // Initialize FIRST, then stamp the heartbeat. initTracker reads the previous
-  // heartbeat to measure browser downtime; writing the new one before init runs
-  // would erase that evidence when a persisted, overdue alarm fires at startup
-  // — the exact case (long absence) the downtime feature exists to handle.
   await ensureReady();
-  await setLastTickAt(Date.now());
 
   const settings = await getSettings();
 

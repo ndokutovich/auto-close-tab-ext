@@ -2,12 +2,11 @@ import browser from 'webextension-polyfill';
 import type { AgingStage } from '../shared/types';
 import {
   getTabTimes, setTabTimes, getTabStages, setTabStages, unlockTab,
-  getPausedSince, setPausedSince, getLockedTabs, setLockedTabs, getLastTickAt,
+  getPausedSince, setPausedSince, getLockedTabs, setLockedTabs,
 } from '../shared/storage';
 import { shiftTabTimes } from '../shared/pure';
 import {
-  STORAGE_KEYS, SESSION_MARKER_KEY, IDLE_DETECTION_SECONDS,
-  DOWNTIME_THRESHOLD_MS, MAX_TIME_SHIFT_MS,
+  STORAGE_KEYS, SESSION_MARKER_KEY, IDLE_DETECTION_SECONDS, MAX_TIME_SHIFT_MS,
 } from '../shared/constants';
 import { clearCachedTitle } from './timer-manager';
 
@@ -150,68 +149,65 @@ async function isSystemIdle(): Promise<boolean> {
 }
 
 /**
- * Aging measures active browsing time, not wall-clock time. Two spans that
- * elapse before startup are not active time and must be given back:
+ * Reconcile aging state with how the service worker was started.
  *
- *   - a pending idle span — the OS was idle/locked when the browser last ran
- *   - browser downtime — the gap since the last heartbeat, i.e. the browser
- *     was not running at all
+ * The trust boundary is the browser session, detected by a storage.session
+ * marker that survives a service-worker recycle but not a browser restart:
  *
- * The spans nest rather than add up: a pause covers everything inside it, and
- * an idle span left open at shutdown already covers the downtime that followed.
- * Applying more than one would shift twice, so the widest pending span wins and
- * the narrower ones stand down.
- */
-/**
- * Returns true when it grace-reset the tracked tabs (treat the startup as a
- * fresh start). initTracker uses that to also assign `now` to open tabs that
- * were not in persisted storage — otherwise those would keep their old
- * `tab.lastAccessed` and could expire while their persisted peers were reset.
+ *   - Recycle (marker present): the browser never closed, tab ids are stable,
+ *     and persisted per-id timers/stages/locks still refer to the same tabs.
+ *     Only a pending idle span (the OS was idle when the SW was last alive) is
+ *     given back; pause is left to settle on unpause.
+ *
+ *   - Restart (marker absent): a new browser session. Tab ids are reassigned on
+ *     restore, so persisted per-id timers, stages, and locks may now point at
+ *     unrelated tabs — trusting them would let a reused id inherit an old tab's
+ *     timer (and close it) or an old lock (and freeze it). We cannot re-map
+ *     them, so we start fresh: reset every tracked tab to now/stage-0 and clear
+ *     locks. This also makes a long absence safe (nothing is charged) and needs
+ *     no wall-clock downtime measurement. The user's pause intent is kept.
+ *
+ * Returns true when it grace-reset (a fresh start), so initTracker assigns `now`
+ * to open tabs missing from storage instead of their stale `tab.lastAccessed`.
  */
 async function compensateInactiveTime(now: number): Promise<boolean> {
-  // Always consume the marker, even on paths that shift nothing — leaving it
-  // unset would make the next service-worker recycle look like a restart.
   const browserRestarted = await consumeBrowserSessionMarker();
 
-  // Pause settles its own span on unpause, downtime inside it included.
+  if (browserRestarted) {
+    // New session — do not trust any per-id state carried across the restart.
+    for (const id of Object.keys(tabTimes)) {
+      tabTimes[Number(id)] = now;
+      tabStages[Number(id)] = 0;
+    }
+    dirty = true;
+    // A stale idle marker from the previous session no longer applies.
+    if (idleSince !== null) {
+      idleSince = null;
+      await browser.storage.local.remove(STORAGE_KEYS.IDLE_SINCE);
+    }
+    // Locks are keyed by ephemeral tab id and cannot be re-associated with the
+    // restored tabs, so clear them rather than risk freezing an unrelated tab.
+    const locked = await getLockedTabs();
+    if (locked.length > 0) await setLockedTabs([]);
+    return true;
+  }
+
+  // --- Live session (marker present): ids stable, per-id state trustworthy. ---
+
+  // Pause settles its own span on unpause.
   if (pausedSince !== null) return false;
 
   if (idleSince !== null) {
     applyShift(now - idleSince, now);
-    // Consume the marker. The idle handler only arms it when null, so leaving a
-    // stale one behind would make the next idle -> active transition shift by
-    // the entire working period since startup on top of the real idle span.
-    // Re-arm at `now` if the OS is still idle, so the ongoing span is not lost.
+    // Re-arm at `now` if still idle, else clear — a stale marker would make the
+    // next idle -> active transition over-shift by the whole post-startup span.
     idleSince = (await isSystemIdle()) ? now : null;
     if (idleSince === null) {
       await browser.storage.local.remove(STORAGE_KEYS.IDLE_SINCE);
     } else {
       await browser.storage.local.set({ [STORAGE_KEYS.IDLE_SINCE]: idleSince });
     }
-    return false;
   }
-
-  // Only a genuine browser restart can have produced downtime. A recycled
-  // service worker inside a live browser has not missed any real time.
-  if (!browserRestarted) return false;
-
-  const lastTick = await getLastTickAt();
-  if (lastTick === null) {
-    // No heartbeat and a genuine restart: either a fresh install (no tabs
-    // tracked yet — reset is a no-op) or an upgrade from a version without the
-    // heartbeat, carrying stale wall-clock timers. We cannot measure the
-    // downtime, so treat it as a fresh start and reset tracked tabs to now
-    // (times AND stages) rather than charge a possibly week-long absence.
-    for (const id of Object.keys(tabTimes)) {
-      tabTimes[Number(id)] = now;
-      tabStages[Number(id)] = 0;
-    }
-    dirty = true;
-    return true;
-  }
-  const downtime = now - lastTick;
-  if (downtime < DOWNTIME_THRESHOLD_MS) return false; // shut down and reopened at once
-  applyShift(downtime, now);
   return false;
 }
 

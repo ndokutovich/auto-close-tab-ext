@@ -711,9 +711,15 @@ scenario('Title blink works without the title prefix', async () => {
     // Phase 1 — confirm the tab actually aged to a blinking stage (>=3), using
     // the extension's own stage as the signal. Separates "did not age" (an
     // environment/idle stall) from "aged but did not blink" (the real thing).
+    // Inject real input each poll: with no user activity the OS goes idle after
+    // 60s and idle compensation shifts the timer forward, stalling aging in an
+    // automated run. A moving cursor keeps the session active.
     let maxStage = 0;
-    const ageDeadline = Date.now() + 115000;
+    let jiggle = 0;
+    const ageDeadline = Date.now() + 118000;
     while (Date.now() < ageDeadline && maxStage < 3) {
+      jiggle = (jiggle + 7) % 50;
+      await parking.mouse.move(100 + jiggle, 100 + jiggle).catch(() => {});
       await parking.waitForTimeout(2000);
       const states = await probe.evaluate(async () => {
         try { return await browser.runtime.sendMessage({ type: 'GET_TAB_STATES' }); } catch { return null; }

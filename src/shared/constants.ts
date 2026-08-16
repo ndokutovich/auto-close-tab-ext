@@ -27,11 +27,7 @@ export const MAX_TIMEOUT_MINUTES = 43_200;
 // Seconds of inactivity before the OS is considered idle.
 export const IDLE_DETECTION_SECONDS = 60;
 
-// A heartbeat gap wider than this means the browser was not running at all.
-// Two alarm periods of slack absorbs ordinary MV3 service-worker churn.
-export const DOWNTIME_THRESHOLD_MS = CHECK_INTERVAL_SECONDS * 2 * 1000;
-
-// Ceiling for any inactive-time compensation (pause, idle, browser downtime).
+// Ceiling for in-session inactive-time compensation (pause, idle).
 // shiftTabTimes already clamps every tab to `now`, so this only guards against
 // absurd clock skew turning into a nonsense span.
 export const MAX_TIME_SHIFT_MS = 365 * 24 * 60 * 60 * 1000;
@@ -63,7 +59,6 @@ export const STORAGE_KEYS = {
   LOCKED_TABS: 'lockedTabs',
   PAUSED_SINCE: 'pausedSince',
   IDLE_SINCE: 'idleSince',
-  LAST_TICK_AT: 'lastTickAt',
 } as const;
 
 // storage.session key — present for as long as the browser profile lives.
