@@ -17,7 +17,7 @@ Aging Tabs gradually fades inactive tab favicons from color to grayscale, giving
 ### Key Features
 
 **Visual Aging**
-Watch your inactive tabs slowly fade. The longer you don't visit a tab, the grayer its favicon becomes. At the final stage, the title blinks as a warning.
+Watch your inactive tabs slowly fade. The longer you don't visit a tab, the grayer its favicon becomes. Optional emoji indicators mark each stage in the title, and the title can blink at the end if you want a louder warning.
 
 **Graveyard with Restore**
 Every auto-closed tab is saved to a searchable list. Sort by recent, domain, or alphabetically. Click to restore instantly. Export/import your graveyard as JSON.
@@ -41,13 +41,15 @@ Don't want to close tabs? Switch to discard mode — tabs stay visible but unloa
 - Timeout: 1 minute to 30 days
 - Favicon dimming on/off
 - Title prefix indicators on/off
+- Title blinking on/off (off by default)
+- Custom stage timings, or evenly spread across the timeout
 - Domain whitelist
 - Min tab count floor (set to 0 for no limit)
 - Close empty tabs on/off
 - Protect grouped tabs on/off
 
 **Privacy First**
-All data stays in your browser. No accounts, no servers, no tracking. Zero network requests.
+All data stays in your browser. No accounts, no servers, no tracking, nothing sent anywhere. The only request it ever makes is re-fetching a tab's own favicon when that icon lives on another domain and cannot be read from the page — needed to dim it.
 
 **Lightweight**
 Pure TypeScript, no frameworks. Follows your browser's light/dark theme. Available in English and Russian.

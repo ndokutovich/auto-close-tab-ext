@@ -40,6 +40,13 @@
   "hintFavicon": { "message": "Progressively desaturate favicons as tabs age" },
   "labelTitlePrefix": { "message": "Title prefix" },
   "hintTitlePrefix": { "message": "Add emoji indicators to tab titles (may conflict with some SPAs)" },
+  "labelTitleBlink": { "message": "Blink title when closing" },
+  "hintTitleBlink": { "message": "Pulse the title in the last two stages. Off keeps a static emoji." },
+  "labelCustomStages": { "message": "Custom stage timings" },
+  "hintCustomStages": { "message": "Off spreads the stages evenly across the timeout" },
+  "labelStageMinutes": { "message": "Stage starts at (minutes)" },
+  "hintStageOrder": { "message": "Each value must be larger than the one before it" },
+  "statusStageOrder": { "message": "Stage timings must increase" },
 
   "sectionWhitelist": { "message": "Domain Whitelist" },
   "hintWhitelist": { "message": "Tabs from these domains will never be auto-closed (one per line)" },

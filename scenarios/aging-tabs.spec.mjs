@@ -6,6 +6,7 @@
  */
 
 import { chromium } from 'playwright';
+import { createServer } from 'http';
 import { execFileSync } from 'child_process';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -19,6 +20,9 @@ const ROOT = resolve(__dirname, '..');
 let context;
 let extId;
 
+// Resolved to 127.0.0.1 via --host-resolver-rules; looks public to the SSRF guard.
+const CDN_HOST = 'cdn.aging-tabs.test';
+
 // --- Helpers ---
 
 async function launchWithExtension() {
@@ -29,6 +33,10 @@ async function launchWithExtension() {
       `--load-extension=${EXT_PATH}`,
       '--no-first-run',
       '--disable-default-apps',
+      // Gives the favicon fixture a non-loopback hostname. The background
+      // refuses to fetch private addresses (SSRF guard), so a 127.0.0.1 icon
+      // could never exercise the cross-origin path.
+      `--host-resolver-rules=MAP ${CDN_HOST} 127.0.0.1`,
     ],
     viewport: { width: 1280, height: 800 },
   });
@@ -57,6 +65,104 @@ async function openOptions() {
   await page.goto(`chrome-extension://${extId}/options/options.html`);
   await page.waitForTimeout(500);
   return page;
+}
+
+/**
+ * Two throwaway origins: one serves the page, the other its favicon with no
+ * Access-Control-Allow-Origin header — the shape of a CDN-hosted icon, which is
+ * the case that silently skipped dimming.
+ */
+const testServers = [];
+
+async function startFaviconFixture() {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect width="16" height="16" fill="#e11d48"/></svg>';
+
+  const iconServer = createServer((_req, res) => {
+    res.writeHead(200, { 'Content-Type': 'image/svg+xml' });
+    res.end(svg);
+  });
+  await new Promise(r => iconServer.listen(0, '127.0.0.1', r));
+  const iconPort = iconServer.address().port;
+
+  const makePageServer = (iconHref) => createServer((_req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.end(`<!doctype html><html><head><title>Fixture Page</title>
+<link rel="icon" type="image/svg+xml" href="${iconHref}"></head><body><h1>fixture</h1></body></html>`);
+  });
+
+  const crossServer = makePageServer(`http://${CDN_HOST}:${iconPort}/favicon.svg`);
+  await new Promise(r => crossServer.listen(0, '127.0.0.1', r));
+
+  const sameServer = createServer((req, res) => {
+    if (req.url.endsWith('.svg')) {
+      res.writeHead(200, { 'Content-Type': 'image/svg+xml' });
+      res.end(svg);
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': 'text/html' });
+    res.end(`<!doctype html><html><head><title>Fixture Page</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"></head><body><h1>fixture</h1></body></html>`);
+  });
+  await new Promise(r => sameServer.listen(0, '127.0.0.1', r));
+
+  testServers.push(iconServer, crossServer, sameServer);
+  return {
+    crossOriginPage: `http://127.0.0.1:${crossServer.address().port}/`,
+    sameOriginPage: `http://127.0.0.1:${sameServer.address().port}/`,
+  };
+}
+
+function closeTestServers() {
+  for (const s of testServers) s.close();
+  testServers.length = 0;
+}
+
+/** Read the page's icon links and whether any of them carries our dimmed PNG. */
+function readIconState(page) {
+  return page.evaluate(() => {
+    const links = [...document.querySelectorAll('link[rel~="icon" i], link[rel="shortcut icon" i]')];
+    return {
+      title: document.title,
+      dimmed: links.some(l => l.href.startsWith('data:image/png')),
+    };
+  });
+}
+
+/**
+ * Age a freshly opened page at the 1-minute minimum while parked on another tab,
+ * sampling until `predicate` holds or the budget runs out. Returns the last
+ * sample either way so callers can assert on it.
+ */
+async function ageAndSample(url, predicate, budgetMs = 100000) {
+  const page = await context.newPage();
+  await page.goto(url);
+  const parking = await context.newPage();
+  await parking.bringToFront();
+
+  let last = await readIconState(page);
+  const deadline = Date.now() + budgetMs;
+  while (Date.now() < deadline) {
+    await parking.waitForTimeout(5000);
+    try {
+      last = await readIconState(page);
+    } catch (err) {
+      await parking.close();
+      throw new Error(`Fixture tab disappeared mid-measurement: ${err.message}`);
+    }
+    if (predicate(last)) break;
+  }
+
+  // Ask the extension what it believes, so a stalled run reports why.
+  const probe = await openOptions();
+  const tabStates = await probe.evaluate(async () => {
+    try { return await browser.runtime.sendMessage({ type: 'GET_TAB_STATES' }); } catch { return null; }
+  });
+  await probe.close();
+  await parking.close();
+  await page.close().catch(() => {});
+
+  const seenStages = tabStates ? Object.values(tabStates).map(s => s.stage) : [];
+  return { last, aged: seenStages.some(s => s > 0), seenStages };
 }
 
 async function setTimeoutMinutes(minutes) {
@@ -477,6 +583,114 @@ scenario('Restore opens new tab (deterministic)', async () => {
     } catch (e) { /* ignore */ }
   });
   await cleanup.close();
+});
+
+/** Write settings straight through the background API. */
+async function setSettings(partial) {
+  const page = await openOptions();
+  await page.evaluate(async (s) => {
+    await browser.runtime.sendMessage({ type: 'SAVE_SETTINGS', settings: s });
+  }, partial);
+  await page.waitForTimeout(300);
+  await page.close();
+}
+
+scenario('Title is left alone when titlePrefix is off', async () => {
+  const { sameOriginPage } = await startFaviconFixture();
+  await setSettings({ timeoutMinutes: 2, minTabCount: 0, titlePrefix: false, titleBlink: false, faviconDimming: true });
+
+  // Wait for dimming as the signal that aging really progressed — otherwise a
+  // passing title assertion would prove nothing but a stalled timer.
+  const res = await ageAndSample(sameOriginPage, s => s.dimmed);
+  const { last } = res;
+
+  if (!last.dimmed) throw new Error(`Dimming never appeared (extension stages seen: ${JSON.stringify(res.seenStages)})`);
+  if (last.title !== 'Fixture Page') {
+    throw new Error(`titlePrefix is off, title must be untouched, got "${last.title}"`);
+  }
+
+  closeTestServers();
+});
+
+scenario('Cross-origin favicons dim', async () => {
+  const { crossOriginPage } = await startFaviconFixture();
+  await setSettings({ timeoutMinutes: 2, minTabCount: 0, faviconDimming: true, titlePrefix: false, titleBlink: false });
+
+  const res = await ageAndSample(crossOriginPage, s => s.dimmed);
+  const { last } = res;
+
+  if (!last.dimmed) {
+    if (!res.aged) throw new Error(`Tab never aged at all (stages: ${JSON.stringify(res.seenStages)})`);
+    throw new Error('Favicon served cross-origin without CORS never dimmed');
+  }
+
+  closeTestServers();
+});
+
+scenario('Favicon is left alone when dimming is off', async () => {
+  const { sameOriginPage } = await startFaviconFixture();
+  await setSettings({ timeoutMinutes: 2, minTabCount: 0, faviconDimming: false, titlePrefix: true, titleBlink: false });
+
+  // Here the title is the progress signal, since dimming is what we expect not to happen.
+  const res = await ageAndSample(sameOriginPage, s => s.title !== 'Fixture Page');
+  const { last } = res;
+
+  if (last.title === 'Fixture Page') throw new Error(`Title never changed (stages: ${JSON.stringify(res.seenStages)})`);
+  if (last.dimmed) throw new Error('faviconDimming is off, the icon must be untouched');
+
+  closeTestServers();
+  await setSettings({ timeoutMinutes: 30, minTabCount: 3, faviconDimming: true, titlePrefix: false, titleBlink: false });
+});
+
+scenario('Custom stage timings round-trip', async () => {
+  const options = await openOptions();
+
+  // Hidden until asked for — the default is even fractions of the timeout.
+  if (!(await options.isHidden('#stage-thresholds-field'))) {
+    throw new Error('Stage inputs should stay hidden while custom timings are off');
+  }
+
+  await options.check('#customStages');
+  if (await options.isHidden('#stage-thresholds-field')) {
+    throw new Error('Stage inputs should appear once custom timings are on');
+  }
+
+  // The exact request from the report: hourglass at 3, Zzz at 5, warning at 10.
+  await options.fill('#stage1', '3');
+  await options.fill('#stage2', '5');
+  await options.fill('#stage3', '10');
+  await options.fill('#stage4', '12');
+  await options.click('#btn-save');
+  await options.waitForTimeout(500);
+  await options.reload();
+  await options.waitForTimeout(500);
+
+  const persisted = await Promise.all(
+    ['#stage1', '#stage2', '#stage3', '#stage4'].map(sel => options.inputValue(sel)),
+  );
+  if (persisted.join(',') !== '3,5,10,12') {
+    throw new Error(`Stage timings did not persist, got ${persisted.join(',')}`);
+  }
+  if (!(await options.isChecked('#customStages'))) {
+    throw new Error('Custom stage toggle did not persist');
+  }
+
+  // Out-of-order values must be refused, not silently reordered or clamped.
+  await options.fill('#stage3', '2');
+  await options.click('#btn-save');
+  await options.waitForTimeout(400);
+  await options.reload();
+  await options.waitForTimeout(500);
+  const afterBad = await options.inputValue('#stage3');
+  if (afterBad !== '10') {
+    throw new Error(`Descending value should have been rejected, stage3 is now "${afterBad}"`);
+  }
+
+  // Back to defaults for the scenarios that follow.
+  await options.uncheck('#customStages');
+  await options.click('#btn-save');
+  await options.waitForTimeout(400);
+  await options.close();
 });
 
 scenario('Russian locale', async () => {

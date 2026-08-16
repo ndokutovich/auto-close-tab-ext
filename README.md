@@ -8,7 +8,7 @@ Growing tab count causes decision paralysis — you keep tabs open "just in case
 
 ## How It Works
 
-1. **Visual aging** — inactive tab favicons progressively desaturate. Optional title prefix shows emoji indicators. At the final stage, the title blinks as a last warning
+1. **Visual aging** — inactive tab favicons progressively desaturate. Optional title prefix shows emoji indicators, and optional blinking marks the last two stages
 2. **Auto-close** — tabs inactive beyond a configurable timeout (default 30 min) are closed. Alternative: discard mode unloads from memory without closing
 3. **Graveyard** — every auto-closed tab is saved to a searchable list with one-click restore. Sort by recent, domain, or alphabetically. Export/import as JSON
 4. **Smart immunity** — pinned tabs, locked tabs, audible tabs, grouped tabs, whitelisted domains, and the active tab are never closed
@@ -19,6 +19,8 @@ Growing tab count causes decision paralysis — you keep tabs open "just in case
 
 - Favicon dimming: 5-stage progressive grayscale (0% → 25% → 50% → 75% → 100%)
 - Title prefix: optional emoji indicators (off by default)
+- Title blinking: optional pulse at stages 3-4 (off by default)
+- Stage timings: even fractions of the timeout, or explicit per-stage minutes
 - Title blink warning before close
 - Searchable graveyard popup with sort (Recent / By domain / A-Z)
 - Badge count on extension icon
@@ -35,7 +37,7 @@ Growing tab count causes decision paralysis — you keep tabs open "just in case
 - Light/dark theme (follows browser)
 - i18n: English + Russian
 - Cross-browser: Chrome + Firefox (Manifest V3)
-- Privacy-first: all data stays in browser, no external services
+- Privacy-first: all data stays in browser, no external services (favicons are re-fetched from their own origin when cross-origin dimming requires it)
 
 ## Install
 
@@ -80,7 +82,7 @@ While Aging Tabs includes multiple safety nets (graveyard, notifications, lock, 
 
 ## Privacy
 
-All data stays in your browser. No accounts, no servers, no tracking, no network requests. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
+All data stays in your browser. No accounts, no servers, no tracking, nothing sent anywhere. The only network request is re-fetching a tab's own favicon when it is hosted cross-origin and therefore unreadable from the page. See [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
 
 ## License
 

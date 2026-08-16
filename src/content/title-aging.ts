@@ -103,7 +103,7 @@ function setupObserver(): void {
   headObserver.observe(head, { childList: true });
 }
 
-export function handleTitleAging(stage: AgingStage): void {
+export function handleTitleAging(stage: AgingStage, blink = false): void {
   currentStage = stage;
 
   if (stage === 0) {
@@ -117,8 +117,9 @@ export function handleTitleAging(stage: AgingStage): void {
 
   setupObserver();
 
-  // Stages 3-4: blink with increasing urgency
-  if (stage >= 3 && BLINK_SPEED[stage]) {
+  // Stages 3-4 pulse only when asked to. Without it the stage still shows, as a
+  // static emoji prefix — the same information without the movement.
+  if (blink && stage >= 3 && BLINK_SPEED[stage]) {
     startBlink(stage);
   } else {
     stopBlink();

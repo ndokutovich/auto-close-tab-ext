@@ -4,15 +4,20 @@ import { STAGE_GRAYSCALE } from '../shared/constants';
 
 let originalFaviconUrl: string | null = null;
 let lastAppliedDataUrl: string | null = null;
-let canvas: HTMLCanvasElement | null = null;
 
-function getOrCreateCanvas(): HTMLCanvasElement {
-  if (!canvas) {
-    canvas = document.createElement('canvas');
-    canvas.width = 32;
-    canvas.height = 32;
-  }
-  return canvas;
+/**
+ * A fresh canvas per draw, deliberately not cached.
+ *
+ * Drawing a cross-origin image taints a canvas permanently. A shared one would
+ * stay poisoned for the rest of the page's life, so the background-fetched copy
+ * — clean data: pixels that should read back fine — would still fail toDataURL
+ * on the very canvas the failed attempt ruined.
+ */
+function createCanvas(): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = 32;
+  c.height = 32;
+  return c;
 }
 
 function getCurrentFaviconUrl(): string {
@@ -33,7 +38,7 @@ function setFavicon(dataUrl: string): void {
 }
 
 function applyGrayscale(img: HTMLImageElement, percentage: number): string {
-  const c = getOrCreateCanvas();
+  const c = createCanvas();
   const ctx = c.getContext('2d')!;
 
   const w = img.naturalWidth || 32;
@@ -68,7 +73,12 @@ export function handleFaviconAging(stage: AgingStage, _timeRemainingMs: number):
 
   const percentage = STAGE_GRAYSCALE[stage];
   const img = new Image();
-  img.crossOrigin = 'anonymous';
+
+  // Deliberately NOT setting img.crossOrigin. With it, a favicon served without
+  // CORS headers — the common case for CDN-hosted icons — fails to load at all,
+  // so onerror fired and dimming silently did nothing. Letting the load succeed
+  // taints the canvas instead, toDataURL throws, and the background fetch below
+  // (which has host permissions) takes over.
 
   img.onload = () => {
     try {
@@ -76,13 +86,15 @@ export function handleFaviconAging(stage: AgingStage, _timeRemainingMs: number):
       lastAppliedDataUrl = dataUrl;
       setFavicon(dataUrl);
     } catch {
-      // Canvas tainted by CORS — request background to fetch
+      // Canvas tainted by cross-origin pixels — let the background fetch it.
       requestFaviconViaBackground(originalFaviconUrl!, percentage);
     }
   };
 
   img.onerror = () => {
-    // Can't load favicon — skip visual aging for this tab
+    // The icon may still be reachable from the background, which is not bound
+    // by the page's origin — try there before giving up on this tab.
+    requestFaviconViaBackground(originalFaviconUrl!, percentage);
   };
 
   img.src = originalFaviconUrl;
@@ -107,9 +119,14 @@ async function requestFaviconViaBackground(url: string, percentage: number): Pro
         clearTimeout(timeoutId);
         const img = new Image();
         img.onload = () => {
-          const dataUrl = applyGrayscale(img, percentage);
-          lastAppliedDataUrl = dataUrl;
-          setFavicon(dataUrl);
+          try {
+            // A data: URL is same-origin, so the canvas stays clean here.
+            const dataUrl = applyGrayscale(img, percentage);
+            lastAppliedDataUrl = dataUrl;
+            setFavicon(dataUrl);
+          } catch {
+            // Nothing further to try — leave the icon as the page set it.
+          }
         };
         img.src = message.dataUrl;
       }

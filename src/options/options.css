@@ -394,3 +394,14 @@ textarea:focus {
 .welcome-banner button {
   margin-top: 12px;
 }
+
+/* Stage threshold row — four small minute inputs side by side */
+.stage-inputs {
+  display: flex;
+  gap: 8px;
+}
+
+.stage-inputs input {
+  flex: 1;
+  min-width: 0;
+}

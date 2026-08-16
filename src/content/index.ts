@@ -13,8 +13,20 @@ browser.runtime.onMessage.addListener((rawMessage: unknown) => {
   const message = rawMessage as BgToContentMsg;
   switch (message.type) {
     case 'UPDATE_AGING':
-      handleFaviconAging(message.stage, message.timeRemainingMs);
-      handleTitleAging(message.stage);
+      // Each effect is gated by its own setting. Reset rather than skip when a
+      // setting is off, otherwise turning it off would freeze the page with
+      // whatever aging was already painted on it.
+      if (message.faviconDimming) {
+        handleFaviconAging(message.stage, message.timeRemainingMs);
+      } else {
+        resetFavicon();
+      }
+
+      if (message.titlePrefix) {
+        handleTitleAging(message.stage, message.titleBlink);
+      } else {
+        resetTitle();
+      }
       break;
 
     case 'RESET_AGING':

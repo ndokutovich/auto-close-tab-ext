@@ -1,7 +1,7 @@
 import browser from 'webextension-polyfill';
 import type { Settings, GraveyardEntry, AgingStage } from './types';
 import { DEFAULT_SETTINGS, STORAGE_KEYS, MIN_TIMEOUT_MINUTES, MAX_TIMEOUT_MINUTES } from './constants';
-import { capGraveyard } from './pure';
+import { capGraveyard, normalizeStageThresholds } from './pure';
 
 // --- Settings ---
 
@@ -29,6 +29,8 @@ export async function saveSettings(partial: Partial<Settings>): Promise<Settings
     historySyncEnabled: !!merged.historySyncEnabled,
     faviconDimming: !!merged.faviconDimming,
     titlePrefix: !!merged.titlePrefix,
+    titleBlink: !!merged.titleBlink,
+    stageThresholdMinutes: normalizeStageThresholds(merged.stageThresholdMinutes),
     closeEmptyTabs: !!merged.closeEmptyTabs,
     protectGroupedTabs: !!merged.protectGroupedTabs,
     expireAction: merged.expireAction === 'discard' ? 'discard' : 'close',

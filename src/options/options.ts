@@ -12,6 +12,13 @@ const closeEmptyToggle = document.getElementById('closeEmptyTabs') as HTMLInputE
 const protectGroupsToggle = document.getElementById('protectGroupedTabs') as HTMLInputElement;
 const faviconToggle = document.getElementById('faviconDimming') as HTMLInputElement;
 const titleToggle = document.getElementById('titlePrefix') as HTMLInputElement;
+const titleBlinkToggle = document.getElementById('titleBlink') as HTMLInputElement;
+const customStagesToggle = document.getElementById('customStages') as HTMLInputElement;
+const stageField = document.getElementById('stage-thresholds-field')!;
+const stageErrorEl = document.getElementById('stage-error')!;
+const stageInputs = [1, 2, 3, 4].map(
+  n => document.getElementById(`stage${n}`) as HTMLInputElement,
+);
 const whitelistArea = document.getElementById('whitelist') as HTMLTextAreaElement;
 const graveyardSizeInput = document.getElementById('graveyardSize') as HTMLInputElement;
 const graveyardCountEl = document.getElementById('graveyard-count')!;
@@ -35,17 +42,65 @@ function applySettingsToForm(settings: Settings): void {
   protectGroupsToggle.checked = settings.protectGroupedTabs;
   faviconToggle.checked = settings.faviconDimming;
   titleToggle.checked = settings.titlePrefix;
+  titleBlinkToggle.checked = settings.titleBlink;
+  applyStageSettings(settings);
   whitelistArea.value = settings.whitelistedDomains.join('\n');
   graveyardSizeInput.value = String(settings.graveyardMaxSize);
   graveyardRetentionSelect.value = String(settings.graveyardRetentionDays);
   historySyncToggle.checked = settings.historySyncEnabled;
 }
 
+/** Even fractions of the timeout — what the stages default to. */
+function evenStages(timeoutMinutes: number): number[] {
+  return [1, 2, 3, 4].map(n => Math.max(1, Math.round((timeoutMinutes * n) / 5)));
+}
+
+function applyStageSettings(settings: Settings): void {
+  const custom = settings.stageThresholdMinutes;
+  customStagesToggle.checked = custom !== null;
+  stageField.hidden = custom === null;
+  const values = custom ?? evenStages(settings.timeoutMinutes);
+  stageInputs.forEach((input, i) => { input.value = String(values[i]); });
+  stageErrorEl.hidden = true;
+}
+
+/**
+ * null means "use even fractions". Out-of-order values are surfaced rather than
+ * quietly repaired — saveSettings would reject them anyway, and a silently
+ * rewritten schedule is exactly the kind of lie the timeout field used to tell.
+ */
+function readStageInputs(): number[] | null {
+  if (!customStagesToggle.checked) return null;
+  return stageInputs.map(input => Number(input.value));
+}
+
+function stageInputsValid(): boolean {
+  if (!customStagesToggle.checked) return true;
+  const values = readStageInputs()!;
+  return values.every((v, i) => Number.isFinite(v) && v > 0 && (i === 0 || v > values[i - 1]));
+}
+
+customStagesToggle.addEventListener('change', () => {
+  stageField.hidden = !customStagesToggle.checked;
+  if (customStagesToggle.checked) {
+    const timeout = Number(timeoutInput.value) || 30;
+    evenStages(timeout).forEach((v, i) => { stageInputs[i].value = String(v); });
+  }
+  stageErrorEl.hidden = true;
+});
+
 async function loadSettings(): Promise<void> {
   applySettingsToForm(await browser.runtime.sendMessage({ type: 'GET_SETTINGS' }));
 }
 
 async function saveSettings(): Promise<void> {
+  if (!stageInputsValid()) {
+    stageErrorEl.hidden = false;
+    saveStatusEl.textContent = msg('statusStageOrder');
+    return;
+  }
+  stageErrorEl.hidden = true;
+
   const domains = whitelistArea.value
     .split('\n')
     .map(d => d.trim().toLowerCase())
@@ -60,6 +115,8 @@ async function saveSettings(): Promise<void> {
     protectGroupedTabs: protectGroupsToggle.checked,
     faviconDimming: faviconToggle.checked,
     titlePrefix: titleToggle.checked,
+    titleBlink: titleBlinkToggle.checked,
+    stageThresholdMinutes: readStageInputs(),
     whitelistedDomains: domains,
     graveyardMaxSize: Number(graveyardSizeInput.value) ?? 200,
     graveyardRetentionDays: Number(graveyardRetentionSelect.value) || 0,

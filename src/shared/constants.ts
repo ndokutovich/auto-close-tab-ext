@@ -4,6 +4,8 @@ export const DEFAULT_SETTINGS: Settings = {
   timeoutMinutes: 30,
   faviconDimming: true,
   titlePrefix: false,
+  titleBlink: false,
+  stageThresholdMinutes: null,
   closeEmptyTabs: true,
   protectGroupedTabs: true,
   expireAction: 'close',

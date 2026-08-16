@@ -1,5 +1,5 @@
 import browser from 'webextension-polyfill';
-import type { AgingStage, BgToContentMsg } from '../shared/types';
+import type { AgingStage, BgToContentMsg, Settings } from '../shared/types';
 import { ALARM_NAME, CHECK_INTERVAL_SECONDS } from '../shared/constants';
 import { computeAgingStage, extractDomain, stripAgingPrefix } from '../shared/pure';
 import { msg } from '../shared/i18n';
@@ -91,6 +91,14 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
   // Timers will resume from frozen state when unpaused.
   if (isPaused()) return;
   const timeoutMs = settings.timeoutMinutes * 60 * 1000;
+  const thresholdsMs = settings.stageThresholdMinutes
+    ? settings.stageThresholdMinutes.map(m => m * 60 * 1000)
+    : null;
+  const visuals = {
+    faviconDimming: settings.faviconDimming,
+    titlePrefix: settings.titlePrefix,
+    titleBlink: settings.titleBlink,
+  };
   const now = Date.now();
 
   // Single query for all tabs, build lookup map — avoids N+1 tabs.get() calls
@@ -116,7 +124,7 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
     if (isImmune(tab, immunityCtx)) {
       if (getStage(tabId) > 0) {
         setStage(tabId, 0);
-        sendAgingUpdate(tabId, 0, timeoutMs);
+        sendAgingUpdate(tabId, 0, timeoutMs, visuals);
       }
       // Cache clean title while tab is immune / at stage 0
       if (tab.title) cleanTitles.set(tabId, stripAgingPrefix(tab.title));
@@ -130,7 +138,7 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
       continue;
     }
 
-    const newStage = computeAgingStage(elapsed, timeoutMs);
+    const newStage = computeAgingStage(elapsed, timeoutMs, thresholdsMs);
     const oldStage = getStage(tabId);
 
     // Cache clean title while still recoverable (before stage-4 blink)
@@ -142,7 +150,7 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
       setStage(tabId, newStage);
       // Discarded tabs can't receive messages — skip the content script update
       if (!tab.discarded) {
-        sendAgingUpdate(tabId, newStage, timeoutMs - elapsed);
+        sendAgingUpdate(tabId, newStage, timeoutMs - elapsed, visuals);
       }
     }
   }
@@ -184,8 +192,15 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
   await saveCleanTitles();
 }
 
-function sendAgingUpdate(tabId: number, stage: AgingStage, timeRemainingMs: number): void {
-  const message: BgToContentMsg = { type: 'UPDATE_AGING', stage, timeRemainingMs };
+type AgingVisuals = Pick<Settings, 'faviconDimming' | 'titlePrefix' | 'titleBlink'>;
+
+function sendAgingUpdate(
+  tabId: number,
+  stage: AgingStage,
+  timeRemainingMs: number,
+  visuals: AgingVisuals,
+): void {
+  const message: BgToContentMsg = { type: 'UPDATE_AGING', stage, timeRemainingMs, ...visuals };
   browser.tabs.sendMessage(tabId, message).catch(() => {});
 }
 

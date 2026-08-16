@@ -64,6 +64,26 @@
         <p class="hint" data-i18n="hintTitlePrefix">Add emoji indicators to tab titles (may conflict with some SPAs)</p>
         <input type="checkbox" id="titlePrefix">
       </div>
+      <div class="field toggle">
+        <label for="titleBlink" data-i18n="labelTitleBlink">Blink title when closing</label>
+        <p class="hint" data-i18n="hintTitleBlink">Pulse the title in the last two stages. Off keeps a static emoji.</p>
+        <input type="checkbox" id="titleBlink">
+      </div>
+      <div class="field">
+        <label for="customStages" data-i18n="labelCustomStages">Custom stage timings</label>
+        <p class="hint" data-i18n="hintCustomStages">Off spreads the stages evenly across the timeout</p>
+        <input type="checkbox" id="customStages">
+      </div>
+      <div class="field" id="stage-thresholds-field" hidden>
+        <label data-i18n="labelStageMinutes">Stage starts at (minutes)</label>
+        <div class="input-group stage-inputs">
+          <input type="number" id="stage1" min="1" max="43200" step="1" aria-label="Stage 1">
+          <input type="number" id="stage2" min="1" max="43200" step="1" aria-label="Stage 2">
+          <input type="number" id="stage3" min="1" max="43200" step="1" aria-label="Stage 3">
+          <input type="number" id="stage4" min="1" max="43200" step="1" aria-label="Stage 4">
+        </div>
+        <p class="hint" id="stage-error" data-i18n="hintStageOrder">Each value must be larger than the one before it</p>
+      </div>
     </section>
 
     <section class="section">

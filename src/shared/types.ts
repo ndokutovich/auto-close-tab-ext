@@ -7,6 +7,12 @@ export interface Settings {
   timeoutMinutes: number;
   faviconDimming: boolean;
   titlePrefix: boolean;
+  // Pulse the title at stages 3-4. Opt-in: a blinking tab title is distracting,
+  // and the static stage emoji already carries the same information.
+  titleBlink: boolean;
+  // Explicit minute marks at which stages 1..4 begin. null = derive them from
+  // the timeout as even fractions, which is the original behaviour.
+  stageThresholdMinutes: number[] | null;
   closeEmptyTabs: boolean;
   protectGroupedTabs: boolean;
   expireAction: 'close' | 'discard';
@@ -38,7 +44,16 @@ export interface TrackedTab {
 // --- Messages: Background -> Content Script ---
 
 export type BgToContentMsg =
-  | { type: 'UPDATE_AGING'; stage: AgingStage; timeRemainingMs: number }
+  // The visual flags ride along with every update: the content script holds no
+  // settings of its own, so whatever the background sends is authoritative.
+  | {
+      type: 'UPDATE_AGING';
+      stage: AgingStage;
+      timeRemainingMs: number;
+      faviconDimming: boolean;
+      titlePrefix: boolean;
+      titleBlink: boolean;
+    }
   | { type: 'RESET_AGING' }
   | { type: 'FETCH_FAVICON_RESULT'; dataUrl: string; requestId: string };
 

@@ -4,18 +4,52 @@
  */
 
 import type { AgingStage, Settings, GraveyardEntry } from './types';
-import { MAX_STAGE, BLINK_CLOSING_TEXT } from './constants';
+import { MAX_STAGE, BLINK_CLOSING_TEXT, MAX_TIMEOUT_MINUTES } from './constants';
 
 /**
  * Compute the aging stage (0-4) based on elapsed time and total timeout.
  */
-export function computeAgingStage(elapsedMs: number, timeoutMs: number): AgingStage {
+export function computeAgingStage(
+  elapsedMs: number,
+  timeoutMs: number,
+  thresholdsMs?: number[] | null,
+): AgingStage {
   if (timeoutMs <= 0) return 0;
   if (elapsedMs <= 0) return 0;
   if (elapsedMs >= timeoutMs) return MAX_STAGE;
 
+  // Explicit marks: the stage is however many of them have been passed. Marks
+  // beyond the timeout are simply never reached before the tab closes.
+  if (thresholdsMs && thresholdsMs.length === MAX_STAGE) {
+    let stage = 0;
+    for (const mark of thresholdsMs) {
+      if (elapsedMs >= mark) stage++;
+    }
+    return Math.min(MAX_STAGE, stage) as AgingStage;
+  }
+
   const ratio = elapsedMs / timeoutMs;
   return Math.min(MAX_STAGE, Math.floor(ratio * (MAX_STAGE + 1))) as AgingStage;
+}
+
+/**
+ * Validate user-supplied stage marks (in minutes).
+ *
+ * Returns the accepted list, or null to mean "use even fractions". Anything
+ * ambiguous is rejected outright rather than repaired: a silently corrected
+ * threshold list would age tabs on a schedule the user never chose.
+ */
+export function normalizeStageThresholds(input: unknown): number[] | null {
+  if (!Array.isArray(input) || input.length !== MAX_STAGE) return null;
+
+  let previous = 0;
+  for (const value of input) {
+    if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+    if (value <= 0 || value > MAX_TIMEOUT_MINUTES) return null;
+    if (value <= previous) return null; // must strictly ascend
+    previous = value;
+  }
+  return [...input];
 }
 
 /**
