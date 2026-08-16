@@ -6,7 +6,8 @@ import {
 } from '../shared/storage';
 import { shiftTabTimes } from '../shared/pure';
 import {
-  STORAGE_KEYS, SESSION_MARKER_KEY, IDLE_DETECTION_SECONDS, MAX_TIME_SHIFT_MS,
+  STORAGE_KEYS, SESSION_MARKER_KEY, CLASSIFY_ALARM_NAME,
+  IDLE_DETECTION_SECONDS, MAX_TIME_SHIFT_MS,
 } from '../shared/constants';
 import { clearCachedTitle } from './timer-manager';
 
@@ -149,6 +150,17 @@ async function detectRecycle(): Promise<void> {
     await session.set({ [SESSION_MARKER_KEY]: true });
   } catch {
     sessionLive = true;
+  }
+
+  // Still unclassified (marker was absent): this is the first SW of a new
+  // session. It is either a browser launch (onStartup will reset and classify)
+  // or a case with no startup/install event at all — extension re-enable, or a
+  // first worker that died before an event landed — where the browser is alive,
+  // ids are valid, and closing is safe. Schedule a bounded fallback so closing
+  // is never deferred for the whole session; a real launch classifies via
+  // onStartup well before it fires.
+  if (!sessionLive) {
+    browser.alarms.create(CLASSIFY_ALARM_NAME, { delayInMinutes: 0.5 }).catch(() => {});
   }
 }
 

@@ -346,6 +346,38 @@ describe('session classification', () => {
     expect(tracker.isSessionLive()).toBe(true);
   });
 
+  it('schedules a fallback classifier when the marker is absent', async () => {
+    seedTab(1, 5 * MINUTE);
+
+    const tracker = await loadTracker(1);
+    const browser = (await import('webextension-polyfill')).default;
+    await tracker.initTracker();
+
+    // A bounded fallback is armed so an event-less start (re-enable) still
+    // classifies live instead of deferring closes for the whole session.
+    expect(browser.alarms.create).toHaveBeenCalledWith(
+      'classify-session-live',
+      expect.objectContaining({ delayInMinutes: expect.any(Number) }),
+    );
+  });
+
+  it('the fallback classifier alarm marks the session live', async () => {
+    seedTab(1, 5 * MINUTE);
+
+    const { onAlarmFired } = await import('../background/timer-manager');
+    const tracker = await import('../background/tab-tracker');
+    const browser = (await import('webextension-polyfill')).default;
+    vi.mocked(browser.tabs.query).mockResolvedValue([
+      { id: 1, active: false, pinned: false, url: 'https://a.com' } as any,
+    ]);
+
+    await tracker.initTracker();
+    expect(tracker.isSessionLive()).toBe(false);
+
+    await onAlarmFired({ name: 'classify-session-live' } as any);
+    expect(tracker.isSessionLive()).toBe(true);
+  });
+
   it('falls back to live when storage.session is unavailable', async () => {
     const browser = (await import('webextension-polyfill')).default;
     (browser.storage as any).session = undefined;

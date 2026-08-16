@@ -19,6 +19,12 @@ export const DEFAULT_SETTINGS: Settings = {
 export const ALARM_NAME = 'aging-tabs-check';
 export const CHECK_INTERVAL_SECONDS = 30;
 
+// One-shot alarm that classifies the session live if no startup/install event
+// arrived shortly after an unclassified SW start (e.g. extension re-enable,
+// where the browser is alive and ids are valid but no event fires). Bounds the
+// close-deferral so it can never suppress closing for a whole session.
+export const CLASSIFY_ALARM_NAME = 'classify-session-live';
+
 // Timeout bounds, in minutes. The upper bound is 30 days: machines that are
 // used weekly rather than daily need timeouts far beyond one day (issue #1).
 export const MIN_TIMEOUT_MINUTES = 1;
