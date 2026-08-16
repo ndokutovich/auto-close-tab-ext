@@ -1,5 +1,5 @@
 import browser from 'webextension-polyfill';
-import { ensureReady, setupTabListeners } from './tab-tracker';
+import { ensureReady, setupTabListeners, resetTimersForNewSession } from './tab-tracker';
 import { startTimer, onAlarmFired, setupNotificationListener } from './timer-manager';
 import { setupMessageListener } from './messaging';
 import { setupContextMenuListeners, createContextMenuItems, toggleLockForTab } from './context-menu';
@@ -26,9 +26,14 @@ startTimer().catch(err => console.error('[Aging Tabs] startTimer error:', err));
 // Full initialization — only runs on browser startup or extension install/update,
 // NOT on every SW wake-up. Alarms and context menus persist across SW restarts,
 // so recreating them on each wake-up would reset timers and spam errors.
-async function init(freshInstall: boolean): Promise<void> {
+async function init(freshInstall: boolean, freshSession: boolean): Promise<void> {
   try {
     await ensureReady(freshInstall);
+    // A genuine browser restart (or fresh install) starts the session fresh:
+    // tab ids are reassigned on restore, so persisted per-id timers/locks are
+    // not trustworthy. Done before content injection so scripts paint from the
+    // reset state. NOT done on an extension update — the browser is still open.
+    if (freshSession) await resetTimersForNewSession();
     await startTimer();
     await syncBadge();
     if (freshInstall) {
@@ -76,9 +81,16 @@ async function injectContentScripts(): Promise<void> {
 
 // Full init only on real startup/install events. Regular SW wake-ups
 // rely on lazy ensureReady() from inside event listeners.
-browser.runtime.onStartup.addListener(() => init(false));
+//
+// onStartup = a genuine browser restart -> fresh session.
+// onInstalled 'install' = fresh install -> fresh session.
+// onInstalled 'update'/'chrome_update' = the browser stays open, tab ids remain
+//   valid -> preserve timers and locks (a reset here would wipe them on every
+//   auto-update).
+browser.runtime.onStartup.addListener(() => init(false, true));
 browser.runtime.onInstalled.addListener((details) => {
-  init(details.reason === 'install');
+  const freshInstall = details.reason === 'install';
+  init(freshInstall, freshInstall);
   // Always recreate menu items on install/update (handles permission changes)
   createContextMenuItems();
 });

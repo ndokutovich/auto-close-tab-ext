@@ -9,9 +9,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // --- Mock browser.storage.local as a simple in-memory store ---
 
 const store: Record<string, unknown> = {};
-// storage.session survives a service-worker recycle but not a browser restart.
-// Pre-populated below to model an SW recycle inside a live browser.
-const sessionStore: Record<string, unknown> = {};
 
 // Clone on get/set to mimic real browser.storage.local serialization boundary
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v));
@@ -35,12 +32,6 @@ vi.mock('webextension-polyfill', () => ({
           }
         }),
       },
-      session: {
-        get: vi.fn(async (key: string) => (key in sessionStore ? { [key]: sessionStore[key] } : {})),
-        set: vi.fn(async (items: Record<string, unknown>) => {
-          for (const [k, v] of Object.entries(items)) sessionStore[k] = v;
-        }),
-      },
     },
     tabs: {
       query: vi.fn(async () => []),
@@ -52,12 +43,9 @@ vi.mock('webextension-polyfill', () => ({
 
 describe('tab-tracker flush on activation', () => {
   beforeEach(() => {
-    // Clear store and module cache before each test
+    // Clear store and module cache before each test. This is an in-session SW
+    // recycle (not a browser restart), so init preserves the persisted timers.
     for (const key of Object.keys(store)) delete store[key];
-    // Marker present == the browser is alive (this is an SW recycle, not a
-    // browser restart), so init must not grace-reset the persisted timers.
-    for (const key of Object.keys(sessionStore)) delete sessionStore[key];
-    sessionStore['swSessionAlive'] = true;
     vi.resetModules();
   });
 

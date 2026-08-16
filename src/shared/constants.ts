@@ -61,11 +61,6 @@ export const STORAGE_KEYS = {
   IDLE_SINCE: 'idleSince',
 } as const;
 
-// storage.session key — present for as long as the browser profile lives.
-// Its absence at startup is what distinguishes a browser restart from an
-// ordinary service-worker recycle.
-export const SESSION_MARKER_KEY = 'swSessionAlive';
-
 // Number of aging stages (0-4)
 export const MAX_STAGE: AgingStage = 4;
 

@@ -6,7 +6,7 @@ import {
 } from '../shared/storage';
 import { shiftTabTimes } from '../shared/pure';
 import {
-  STORAGE_KEYS, SESSION_MARKER_KEY, IDLE_DETECTION_SECONDS, MAX_TIME_SHIFT_MS,
+  STORAGE_KEYS, IDLE_DETECTION_SECONDS, MAX_TIME_SHIFT_MS,
 } from '../shared/constants';
 import { clearCachedTitle } from './timer-manager';
 
@@ -44,9 +44,9 @@ export async function initTracker(freshInstall = false): Promise<void> {
 
   pausedSince = await getPausedSince();
 
-  // Give back the time the tabs were not actually being neglected, before any
-  // of it can be charged against them.
-  const graced = await compensateInactiveTime(Date.now());
+  // In-session idle compensation. A genuine browser restart is handled by
+  // resetTimersForNewSession (via runtime.onStartup), not here.
+  await compensateInactiveTime(Date.now());
 
   // Reconcile with currently open tabs
   const tabs = await browser.tabs.query({});
@@ -62,11 +62,12 @@ export async function initTracker(freshInstall = false): Promise<void> {
   }
 
   // Add entries for tabs we don't know about.
-  // Fresh install OR a no-heartbeat grace-reset: reset ALL open tabs to now, so
-  // an open tab that was missing from storage is not charged its old
-  // lastAccessed while its persisted peers were graced to now.
+  // On fresh install: reset ALL tabs to now (grace period — don't kill existing
+  // tabs). Otherwise this is a service-worker start inside a live session, so
+  // adopt each new tab's own last-access time. A genuine browser restart resets
+  // everything separately via resetTimersForNewSession.
   const now = Date.now();
-  if (freshInstall || graced) {
+  if (freshInstall) {
     for (const tab of tabs) {
       if (tab.id !== undefined) {
         tabTimes[tab.id] = now;
@@ -116,29 +117,6 @@ function applyShift(spanMs: number, now: number): void {
   dirty = true;
 }
 
-/**
- * True when this is the first service worker of a new browser session.
- *
- * `storage.session` lives and dies with the browser profile, so an absent
- * marker means the browser itself restarted — as opposed to the service worker
- * merely being recycled, which MV3 does every ~30 seconds of inactivity.
- * Without this distinction a throttled alarm would look identical to downtime
- * and hand back time to tabs in a browser that never closed.
- *
- * If the API is unavailable the heartbeat threshold alone decides.
- */
-async function consumeBrowserSessionMarker(): Promise<boolean> {
-  try {
-    const session = browser.storage.session;
-    if (!session) return true;
-    const existing = await session.get(SESSION_MARKER_KEY);
-    await session.set({ [SESSION_MARKER_KEY]: true });
-    return existing?.[SESSION_MARKER_KEY] !== true;
-  } catch {
-    return true;
-  }
-}
-
 async function isSystemIdle(): Promise<boolean> {
   try {
     if (!browser.idle?.queryState) return false;
@@ -149,53 +127,16 @@ async function isSystemIdle(): Promise<boolean> {
 }
 
 /**
- * Reconcile aging state with how the service worker was started.
+ * In-session compensation, run on every service-worker start.
  *
- * The trust boundary is the browser session, detected by a storage.session
- * marker that survives a service-worker recycle but not a browser restart:
- *
- *   - Recycle (marker present): the browser never closed, tab ids are stable,
- *     and persisted per-id timers/stages/locks still refer to the same tabs.
- *     Only a pending idle span (the OS was idle when the SW was last alive) is
- *     given back; pause is left to settle on unpause.
- *
- *   - Restart (marker absent): a new browser session. Tab ids are reassigned on
- *     restore, so persisted per-id timers, stages, and locks may now point at
- *     unrelated tabs — trusting them would let a reused id inherit an old tab's
- *     timer (and close it) or an old lock (and freeze it). We cannot re-map
- *     them, so we start fresh: reset every tracked tab to now/stage-0 and clear
- *     locks. This also makes a long absence safe (nothing is charged) and needs
- *     no wall-clock downtime measurement. The user's pause intent is kept.
- *
- * Returns true when it grace-reset (a fresh start), so initTracker assigns `now`
- * to open tabs missing from storage instead of their stale `tab.lastAccessed`.
+ * The browser never closed here (a genuine restart is handled separately by
+ * resetTimersForNewSession, driven by runtime.onStartup), so tab ids are stable
+ * and persisted per-id timers are trustworthy. Only give back a pending idle
+ * span — the OS was idle/locked while the SW was last alive; pause settles on
+ * unpause.
  */
-async function compensateInactiveTime(now: number): Promise<boolean> {
-  const browserRestarted = await consumeBrowserSessionMarker();
-
-  if (browserRestarted) {
-    // New session — do not trust any per-id state carried across the restart.
-    for (const id of Object.keys(tabTimes)) {
-      tabTimes[Number(id)] = now;
-      tabStages[Number(id)] = 0;
-    }
-    dirty = true;
-    // A stale idle marker from the previous session no longer applies.
-    if (idleSince !== null) {
-      idleSince = null;
-      await browser.storage.local.remove(STORAGE_KEYS.IDLE_SINCE);
-    }
-    // Locks are keyed by ephemeral tab id and cannot be re-associated with the
-    // restored tabs, so clear them rather than risk freezing an unrelated tab.
-    const locked = await getLockedTabs();
-    if (locked.length > 0) await setLockedTabs([]);
-    return true;
-  }
-
-  // --- Live session (marker present): ids stable, per-id state trustworthy. ---
-
-  // Pause settles its own span on unpause.
-  if (pausedSince !== null) return false;
+async function compensateInactiveTime(now: number): Promise<void> {
+  if (pausedSince !== null) return;
 
   if (idleSince !== null) {
     applyShift(now - idleSince, now);
@@ -208,7 +149,39 @@ async function compensateInactiveTime(now: number): Promise<boolean> {
       await browser.storage.local.set({ [STORAGE_KEYS.IDLE_SINCE]: idleSince });
     }
   }
-  return false;
+}
+
+/**
+ * Start the current browser session fresh: reset every tracked tab to now /
+ * stage 0, drop any stale idle marker, and clear locks.
+ *
+ * Called only from a genuine browser restart (runtime.onStartup) or a fresh
+ * install. Across a restart the browser reassigns tab ids when it restores
+ * tabs, so persisted per-id timers, stages, and locks may now point at
+ * unrelated tabs — trusting them would let a reused id inherit an old tab's
+ * timer (and close it) or an old lock (and freeze it). We cannot re-map them, so
+ * we do not trust them. This also makes a long absence safe: nothing is charged.
+ *
+ * NOT called on an extension update/reload — the browser stays open there, ids
+ * remain valid, and resetting would needlessly wipe timers and locks. That
+ * distinction is exactly why this is gated on onStartup, not on a session
+ * marker (which the browser also clears on update/reload).
+ */
+export async function resetTimersForNewSession(): Promise<void> {
+  await ensureReady();
+  const now = Date.now();
+  for (const id of Object.keys(tabTimes)) {
+    tabTimes[Number(id)] = now;
+    tabStages[Number(id)] = 0;
+  }
+  dirty = true;
+  if (idleSince !== null) {
+    idleSince = null;
+    await browser.storage.local.remove(STORAGE_KEYS.IDLE_SINCE);
+  }
+  const locked = await getLockedTabs();
+  if (locked.length > 0) await setLockedTabs([]);
+  await flush();
 }
 
 // --- Pause API ---
