@@ -1,5 +1,5 @@
 import browser from 'webextension-polyfill';
-import { ensureReady, setupTabListeners, resetTimersForNewSession } from './tab-tracker';
+import { ensureReady, setupTabListeners, resetTimersForNewSession, markSessionLive } from './tab-tracker';
 import { startTimer, onAlarmFired, setupNotificationListener } from './timer-manager';
 import { setupMessageListener } from './messaging';
 import { setupContextMenuListeners, createContextMenuItems, toggleLockForTab } from './context-menu';
@@ -29,11 +29,15 @@ startTimer().catch(err => console.error('[Aging Tabs] startTimer error:', err));
 async function init(freshInstall: boolean, freshSession: boolean): Promise<void> {
   try {
     await ensureReady(freshInstall);
-    // A genuine browser restart (or fresh install) starts the session fresh:
-    // tab ids are reassigned on restore, so persisted per-id timers/locks are
-    // not trustworthy. Done before content injection so scripts paint from the
-    // reset state. NOT done on an extension update — the browser is still open.
+    // A genuine browser restart (or fresh install, or migration from an old
+    // version) starts the session fresh: tab ids are reassigned on restore, so
+    // persisted per-id timers/locks are not trustworthy. Done before content
+    // injection so scripts paint from the reset state.
     if (freshSession) await resetTimersForNewSession();
+    // Any init here comes from a real startup/install/update event, which
+    // classifies the session as safe to close tabs in (resetTimersForNewSession
+    // already marks it; this covers the no-reset update path).
+    markSessionLive();
     await startTimer();
     await syncBadge();
     if (freshInstall) {
@@ -90,7 +94,30 @@ async function injectContentScripts(): Promise<void> {
 browser.runtime.onStartup.addListener(() => init(false, true));
 browser.runtime.onInstalled.addListener((details) => {
   const freshInstall = details.reason === 'install';
-  init(freshInstall, freshInstall);
+  // Migrate on an update from a version before the session-aware timer model:
+  // its persisted timers may carry baked-in browser downtime that would age or
+  // close tabs early. A same-model update preserves timers (freshSession false).
+  const migrating = details.reason === 'update'
+    && isOlderThan(details.previousVersion, SESSION_MODEL_VERSION);
+  init(freshInstall, freshInstall || migrating);
   // Always recreate menu items on install/update (handles permission changes)
   createContextMenuItems();
 });
+
+// First version whose persisted timers follow the session-aware model. An
+// update from anything older gets a one-time migration reset.
+const SESSION_MODEL_VERSION = '1.4.0';
+
+/** True when `a` is a strictly older dotted version than `b` (missing == older). */
+function isOlderThan(a: string | undefined, b: string): boolean {
+  if (!a) return true;
+  const pa = a.split('.').map(n => parseInt(n, 10) || 0);
+  const pb = b.split('.').map(n => parseInt(n, 10) || 0);
+  const len = Math.max(pa.length, pb.length);
+  for (let i = 0; i < len; i++) {
+    const da = pa[i] ?? 0;
+    const db = pb[i] ?? 0;
+    if (da !== db) return da < db;
+  }
+  return false;
+}

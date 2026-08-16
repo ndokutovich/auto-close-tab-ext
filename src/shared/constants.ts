@@ -61,6 +61,13 @@ export const STORAGE_KEYS = {
   IDLE_SINCE: 'idleSince',
 } as const;
 
+// storage.session key. Present == this service worker is a *recycle* inside a
+// live browser (the browser clears storage.session on restart AND on extension
+// update/reload). Used only to fast-path recycle detection so tab-closing is not
+// deferred; the browser-restart RESET is driven by runtime.onStartup, never by
+// this marker's absence.
+export const SESSION_MARKER_KEY = 'swSessionAlive';
+
 // Number of aging stages (0-4)
 export const MAX_STAGE: AgingStage = 4;
 

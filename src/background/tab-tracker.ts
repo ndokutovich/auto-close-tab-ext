@@ -6,7 +6,7 @@ import {
 } from '../shared/storage';
 import { shiftTabTimes } from '../shared/pure';
 import {
-  STORAGE_KEYS, IDLE_DETECTION_SECONDS, MAX_TIME_SHIFT_MS,
+  STORAGE_KEYS, SESSION_MARKER_KEY, IDLE_DETECTION_SECONDS, MAX_TIME_SHIFT_MS,
 } from '../shared/constants';
 import { clearCachedTitle } from './timer-manager';
 
@@ -19,6 +19,16 @@ let idleSince: number | null = null;
 let pausedSince: number | null = null;
 
 let initPromise: Promise<void> | null = null;
+
+// Whether this service worker's browser session has been classified as safe to
+// close tabs in. False during the brief window at browser launch between the SW
+// waking (e.g. an overdue alarm) and the onStartup reset — closing on stale,
+// cross-session tab ids in that window could remove a restored tab. A recycle
+// inside a live browser (session marker present) is classified live at once.
+let sessionLive = false;
+export function isSessionLive(): boolean {
+  return sessionLive;
+}
 
 // Serialize all operations that touch tabTimes/idleSince/pausedSince to avoid
 // races between idle state transitions and pause/unpause. Used by both the
@@ -43,6 +53,14 @@ export async function initTracker(freshInstall = false): Promise<void> {
   idleSince = typeof idleRes.idleSince === 'number' ? idleRes.idleSince : null;
 
   pausedSince = await getPausedSince();
+
+  // Classify the session. A present marker means this is a recycle inside a live
+  // browser — safe to age/close immediately. Absent means we are the first SW of
+  // a new session (launch/install/update); leave closing deferred until the
+  // disambiguating event (onStartup resets; onInstalled classifies). If the API
+  // is unavailable we cannot detect a recycle, so classify live to avoid ever
+  // stalling aging (accepting the narrow launch-window risk on that platform).
+  await detectRecycle();
 
   // In-session idle compensation. A genuine browser restart is handled by
   // resetTimersForNewSession (via runtime.onStartup), not here.
@@ -117,6 +135,28 @@ function applyShift(spanMs: number, now: number): void {
   dirty = true;
 }
 
+/**
+ * Detect whether this SW is a recycle (marker present) and stamp the marker for
+ * future recycles this session. Sets sessionLive on a recycle, or when the API
+ * is missing/errors (fall back to live rather than stall aging).
+ */
+async function detectRecycle(): Promise<void> {
+  try {
+    const session = browser.storage.session;
+    if (!session) { sessionLive = true; return; }
+    const existing = await session.get(SESSION_MARKER_KEY);
+    if (existing?.[SESSION_MARKER_KEY] === true) sessionLive = true;
+    await session.set({ [SESSION_MARKER_KEY]: true });
+  } catch {
+    sessionLive = true;
+  }
+}
+
+/** Classify the session as live once a startup/install/update event resolves. */
+export function markSessionLive(): void {
+  sessionLive = true;
+}
+
 async function isSystemIdle(): Promise<boolean> {
   try {
     if (!browser.idle?.queryState) return false;
@@ -162,26 +202,38 @@ async function compensateInactiveTime(now: number): Promise<void> {
  * timer (and close it) or an old lock (and freeze it). We cannot re-map them, so
  * we do not trust them. This also makes a long absence safe: nothing is charged.
  *
- * NOT called on an extension update/reload — the browser stays open there, ids
- * remain valid, and resetting would needlessly wipe timers and locks. That
- * distinction is exactly why this is gated on onStartup, not on a session
- * marker (which the browser also clears on update/reload).
+ * NOT called on an extension update/reload of the same version — the browser
+ * stays open there, ids remain valid, and resetting would needlessly wipe timers
+ * and locks. That distinction is why this is gated on onStartup, not on a
+ * session marker (which the browser also clears on update/reload).
+ *
+ * Serialized through idleOpChain so it cannot interleave with an idle/pause
+ * transition (which would otherwise re-arm idleSince just as we clear it), and
+ * force-writes at the end so a concurrent aging flush that cleared `dirty` in
+ * between cannot make the reset non-persistent.
  */
-export async function resetTimersForNewSession(): Promise<void> {
-  await ensureReady();
-  const now = Date.now();
-  for (const id of Object.keys(tabTimes)) {
-    tabTimes[Number(id)] = now;
-    tabStages[Number(id)] = 0;
-  }
-  dirty = true;
-  if (idleSince !== null) {
-    idleSince = null;
-    await browser.storage.local.remove(STORAGE_KEYS.IDLE_SINCE);
-  }
-  const locked = await getLockedTabs();
-  if (locked.length > 0) await setLockedTabs([]);
-  await flush();
+export function resetTimersForNewSession(): Promise<void> {
+  const task = idleOpChain.then(async () => {
+    await ensureReady();
+    const now = Date.now();
+    for (const id of Object.keys(tabTimes)) {
+      tabTimes[Number(id)] = now;
+      tabStages[Number(id)] = 0;
+    }
+    if (idleSince !== null) {
+      idleSince = null;
+      await browser.storage.local.remove(STORAGE_KEYS.IDLE_SINCE);
+    }
+    const locked = await getLockedTabs();
+    if (locked.length > 0) await setLockedTabs([]);
+    // Force-write: do not depend on `dirty`, which a racing flush may have
+    // cleared after our mutation.
+    await Promise.all([setTabTimes(tabTimes), setTabStages(tabStages)]);
+    dirty = false;
+    markSessionLive();
+  });
+  idleOpChain = task.catch(() => {}); // don't break the chain on error
+  return task;
 }
 
 // --- Pause API ---

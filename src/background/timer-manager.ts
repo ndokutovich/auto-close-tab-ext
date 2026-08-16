@@ -12,6 +12,7 @@ import {
   setStage,
   flush,
   isPaused,
+  isSessionLive,
 } from './tab-tracker';
 import { buildImmunityContext, isImmune } from './immunity';
 import { buryTab, restoreTab, removeEntry, pruneExpiredEntries } from './graveyard';
@@ -190,7 +191,11 @@ async function applyAging(
     }
   }
 
-  if (opts.closeExpired) {
+  // Defer closing until the session is classified. At browser launch an overdue
+  // alarm can wake the worker before onStartup's reset; closing then would act
+  // on stale, cross-session tab ids. Stages/visuals above still update; the next
+  // pass (once live) does the actual closing.
+  if (opts.closeExpired && isSessionLive()) {
     let tabCount = immunityCtx.totalTabCount;
     for (const tabId of tabsToClose) {
       if (tabCount <= settings.minTabCount) break;

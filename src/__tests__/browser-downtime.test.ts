@@ -18,6 +18,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const store: Record<string, unknown> = {};
+// storage.session: present marker == recycle in a live browser; cleared on
+// restart/update. Used by detectRecycle to classify the session.
+const sessionStore: Record<string, unknown> = {};
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v));
 
 let idleState: 'active' | 'idle' | 'locked' = 'active';
@@ -43,6 +46,12 @@ vi.mock('webextension-polyfill', () => ({
         remove: vi.fn(async (keys: string | string[]) => {
           const list = typeof keys === 'string' ? [keys] : keys;
           for (const k of list) delete store[k];
+        }),
+      },
+      session: {
+        get: vi.fn(async (key: string) => (key in sessionStore ? { [key]: sessionStore[key] } : {})),
+        set: vi.fn(async (items: Record<string, unknown>) => {
+          for (const [k, v] of Object.entries(items)) sessionStore[k] = v;
         }),
       },
     },
@@ -89,6 +98,7 @@ async function loadTracker(tabId: number) {
 
 beforeEach(() => {
   for (const key of Object.keys(store)) delete store[key];
+  for (const key of Object.keys(sessionStore)) delete sessionStore[key];
   idleState = 'active';
   vi.clearAllMocks();
   vi.resetModules();
@@ -285,5 +295,66 @@ describe('new-session reset (browser restart / fresh install)', () => {
 
     const elapsed = Date.now() - tracker.getLastAccessed(1)!;
     expect(elapsed).toBeLessThan(1000);
+  });
+});
+
+// --- Session classification: gate closing until the session is known ---
+
+describe('session classification', () => {
+  it('classifies a recycle (marker present) as live immediately', async () => {
+    sessionStore['swSessionAlive'] = true;
+    seedTab(1, 5 * MINUTE);
+
+    const tracker = await loadTracker(1);
+    await tracker.initTracker();
+
+    expect(tracker.isSessionLive()).toBe(true);
+  });
+
+  it('leaves the session unclassified on the first init of a launch (marker absent)', async () => {
+    // No marker yet: this could be a launch (reset pending via onStartup) — do
+    // not classify live, so closing is deferred until the event resolves.
+    seedTab(1, 5 * MINUTE);
+
+    const tracker = await loadTracker(1);
+    await tracker.initTracker();
+
+    expect(tracker.isSessionLive()).toBe(false);
+    // The marker is now stamped so the NEXT recycle is classified at once.
+    expect(sessionStore['swSessionAlive']).toBe(true);
+  });
+
+  it('becomes live after the new-session reset (onStartup path)', async () => {
+    seedTab(1, 5 * MINUTE);
+
+    const tracker = await loadTracker(1);
+    await tracker.initTracker();
+    expect(tracker.isSessionLive()).toBe(false);
+
+    await tracker.resetTimersForNewSession();
+    expect(tracker.isSessionLive()).toBe(true);
+  });
+
+  it('can be marked live without a reset (no-reset update path)', async () => {
+    seedTab(1, 5 * MINUTE);
+
+    const tracker = await loadTracker(1);
+    await tracker.initTracker();
+    expect(tracker.isSessionLive()).toBe(false);
+
+    tracker.markSessionLive();
+    expect(tracker.isSessionLive()).toBe(true);
+  });
+
+  it('falls back to live when storage.session is unavailable', async () => {
+    const browser = (await import('webextension-polyfill')).default;
+    (browser.storage as any).session = undefined;
+    seedTab(1, 5 * MINUTE);
+
+    const tracker = await loadTracker(1);
+    await tracker.initTracker();
+
+    // Cannot detect a recycle — classify live rather than stall aging forever.
+    expect(tracker.isSessionLive()).toBe(true);
   });
 });
