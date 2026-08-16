@@ -1,6 +1,6 @@
 import browser from 'webextension-polyfill';
 import type { AgingStage, BgToContentMsg, Settings } from '../shared/types';
-import { ALARM_NAME, CHECK_INTERVAL_SECONDS, MAX_STAGE, CLASSIFY_ALARM_NAME } from '../shared/constants';
+import { ALARM_NAME, CHECK_INTERVAL_SECONDS, MAX_STAGE } from '../shared/constants';
 import { computeAgingStage, extractDomain, stripAgingPrefix } from '../shared/pure';
 import { msg } from '../shared/i18n';
 import { getSettings, getGraveyard, getLockedTabs } from '../shared/storage';
@@ -13,7 +13,7 @@ import {
   flush,
   isPaused,
   isSessionLive,
-  markSessionLive,
+  classifyLiveIfGraceElapsed,
 } from './tab-tracker';
 import { buildImmunityContext, isImmune } from './immunity';
 import { buryTab, restoreTab, removeEntry, pruneExpiredEntries } from './graveyard';
@@ -73,19 +73,15 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
     return;
   }
 
-  // Fallback session classifier: an unclassified session with no startup/install
-  // event (extension re-enable) is a live browser with valid ids — safe to
-  // close. Bounds the close-deferral. A real launch already classified via
-  // onStartup, making this a no-op.
-  if (alarm.name === CLASSIFY_ALARM_NAME) {
-    await ensureReady();
-    markSessionLive();
-    return;
-  }
-
   if (alarm.name !== ALARM_NAME) return;
 
   await ensureReady();
+
+  // Bounded fallback: if the session stayed unclassified past the grace window
+  // (no onStartup/onInstalled — e.g. extension re-enable), classify it live so
+  // closing resumes. A real launch classified via onStartup's reset long before
+  // this, so it is a no-op there.
+  classifyLiveIfGraceElapsed(Date.now());
 
   const settings = await getSettings();
 

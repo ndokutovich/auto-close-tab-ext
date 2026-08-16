@@ -6,7 +6,7 @@ import {
 } from '../shared/storage';
 import { shiftTabTimes } from '../shared/pure';
 import {
-  STORAGE_KEYS, SESSION_MARKER_KEY, CLASSIFY_ALARM_NAME,
+  STORAGE_KEYS, SESSION_MARKER_KEY, SESSION_CLASSIFY_GRACE_MS,
   IDLE_DETECTION_SECONDS, MAX_TIME_SHIFT_MS,
 } from '../shared/constants';
 import { clearCachedTitle } from './timer-manager';
@@ -27,8 +27,23 @@ let initPromise: Promise<void> | null = null;
 // cross-session tab ids in that window could remove a restored tab. A recycle
 // inside a live browser (session marker present) is classified live at once.
 let sessionLive = false;
+// When the session first became unclassified (marker absent). Used to bound the
+// close-deferral: after SESSION_CLASSIFY_GRACE_MS with no startup/install event,
+// classify live. In-memory only — a persisted alarm could survive a restart and
+// fire before onStartup, closing on stale ids.
+let unclassifiedSince: number | null = null;
 export function isSessionLive(): boolean {
   return sessionLive;
+}
+
+/**
+ * Called from the aging alarm. If the session has stayed unclassified past the
+ * grace window (no onStartup/onInstalled — e.g. extension re-enable, where the
+ * browser is alive and ids are valid), classify it live so closing resumes.
+ */
+export function classifyLiveIfGraceElapsed(now: number): void {
+  if (sessionLive || unclassifiedSince === null) return;
+  if (now - unclassifiedSince >= SESSION_CLASSIFY_GRACE_MS) markSessionLive();
 }
 
 // Serialize all operations that touch tabTimes/idleSince/pausedSince to avoid
@@ -153,20 +168,21 @@ async function detectRecycle(): Promise<void> {
   }
 
   // Still unclassified (marker was absent): this is the first SW of a new
-  // session. It is either a browser launch (onStartup will reset and classify)
-  // or a case with no startup/install event at all — extension re-enable, or a
-  // first worker that died before an event landed — where the browser is alive,
-  // ids are valid, and closing is safe. Schedule a bounded fallback so closing
-  // is never deferred for the whole session; a real launch classifies via
-  // onStartup well before it fires.
+  // session — either a browser launch (onStartup will reset and classify) or a
+  // start with no startup/install event (extension re-enable, or a first worker
+  // that died before an event landed), where the browser is alive and closing
+  // is safe. Stamp the time; the aging alarm classifies live once the grace
+  // window elapses, bounding the deferral. In-memory only, so a restart cannot
+  // carry a premature classification into the next session.
   if (!sessionLive) {
-    browser.alarms.create(CLASSIFY_ALARM_NAME, { delayInMinutes: 0.5 }).catch(() => {});
+    unclassifiedSince = Date.now();
   }
 }
 
 /** Classify the session as live once a startup/install/update event resolves. */
 export function markSessionLive(): void {
   sessionLive = true;
+  unclassifiedSince = null;
 }
 
 async function isSystemIdle(): Promise<boolean> {

@@ -346,36 +346,54 @@ describe('session classification', () => {
     expect(tracker.isSessionLive()).toBe(true);
   });
 
-  it('schedules a fallback classifier when the marker is absent', async () => {
-    seedTab(1, 5 * MINUTE);
+  it('classifies live after the grace window via an aging tick (event-less start)', async () => {
+    vi.useFakeTimers();
+    try {
+      seedTab(1, 5 * MINUTE);
 
-    const tracker = await loadTracker(1);
-    const browser = (await import('webextension-polyfill')).default;
-    await tracker.initTracker();
+      const { onAlarmFired } = await import('../background/timer-manager');
+      const tracker = await import('../background/tab-tracker');
+      const browser = (await import('webextension-polyfill')).default;
+      vi.mocked(browser.tabs.query).mockResolvedValue([
+        { id: 1, active: false, pinned: false, url: 'https://a.com' } as any,
+      ]);
 
-    // A bounded fallback is armed so an event-less start (re-enable) still
-    // classifies live instead of deferring closes for the whole session.
-    expect(browser.alarms.create).toHaveBeenCalledWith(
-      'classify-session-live',
-      expect.objectContaining({ delayInMinutes: expect.any(Number) }),
-    );
+      await tracker.initTracker();
+      expect(tracker.isSessionLive()).toBe(false);
+
+      // Past the grace window with no startup/install event.
+      vi.setSystemTime(Date.now() + 60_000);
+      await onAlarmFired({ name: 'aging-tabs-check' } as any);
+
+      expect(tracker.isSessionLive()).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
-  it('the fallback classifier alarm marks the session live', async () => {
-    seedTab(1, 5 * MINUTE);
+  it('does NOT classify live within the grace window (protects the launch race)', async () => {
+    vi.useFakeTimers();
+    try {
+      seedTab(1, 5 * MINUTE);
 
-    const { onAlarmFired } = await import('../background/timer-manager');
-    const tracker = await import('../background/tab-tracker');
-    const browser = (await import('webextension-polyfill')).default;
-    vi.mocked(browser.tabs.query).mockResolvedValue([
-      { id: 1, active: false, pinned: false, url: 'https://a.com' } as any,
-    ]);
+      const { onAlarmFired } = await import('../background/timer-manager');
+      const tracker = await import('../background/tab-tracker');
+      const browser = (await import('webextension-polyfill')).default;
+      vi.mocked(browser.tabs.query).mockResolvedValue([
+        { id: 1, active: false, pinned: false, url: 'https://a.com' } as any,
+      ]);
 
-    await tracker.initTracker();
-    expect(tracker.isSessionLive()).toBe(false);
+      await tracker.initTracker();
 
-    await onAlarmFired({ name: 'classify-session-live' } as any);
-    expect(tracker.isSessionLive()).toBe(true);
+      // An aging tick well within the grace window must not classify live —
+      // onStartup's reset may still be pending on a genuine launch.
+      vi.setSystemTime(Date.now() + 5_000);
+      await onAlarmFired({ name: 'aging-tabs-check' } as any);
+
+      expect(tracker.isSessionLive()).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('falls back to live when storage.session is unavailable', async () => {
