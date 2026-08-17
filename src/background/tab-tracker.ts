@@ -3,7 +3,7 @@ import type { AgingStage } from '../shared/types';
 import {
   getTabTimes, setTabTimes, getTabStages, setTabStages, unlockTab,
   getPausedSince, setPausedSince, getLockedTabs, setLockedTabs,
-  getVisitedTabs, setVisitedTabs, getSettings,
+  setVisitedTabs, getSettings,
 } from '../shared/storage';
 import { shiftTabTimes } from '../shared/pure';
 import {
@@ -70,7 +70,14 @@ export async function initTracker(freshInstall = false): Promise<void> {
   // Load persisted state
   tabTimes = await getTabTimes();
   tabStages = await getTabStages();
-  visitedTabs = new Set(await getVisitedTabs());
+  const visitedRaw = await browser.storage.local.get(STORAGE_KEYS.VISITED_TABS);
+  // Distinguish "never initialized" (key absent — e.g. an update from a version
+  // before this feature) from a deliberately-empty set (reprotect cleared it).
+  const visitedKeyAbsent = !(STORAGE_KEYS.VISITED_TABS in visitedRaw);
+  const visitedData = visitedRaw[STORAGE_KEYS.VISITED_TABS];
+  visitedTabs = new Set(Array.isArray(visitedData)
+    ? visitedData.filter((id): id is number => typeof id === 'number')
+    : []);
 
   const idleRes = await browser.storage.local.get(STORAGE_KEYS.IDLE_SINCE);
   idleSince = typeof idleRes.idleSince === 'number' ? idleRes.idleSince : null;
@@ -130,12 +137,23 @@ export async function initTracker(freshInstall = false): Promise<void> {
     await setLockedTabs(prunedLocked);
   }
 
-  // Prune visited ids for tabs no longer open. Preserved otherwise (recycle).
-  let visitedPruned = false;
-  for (const id of visitedTabs) {
-    if (!openIds.has(id)) { visitedTabs.delete(id); visitedPruned = true; }
+  // First run with no visited set yet (fresh install, or an update from a
+  // version before this feature): seed every currently-open tab as visited.
+  // These predate the feature — the user has been using them this session, so
+  // they must not be retroactively protected when protectUnvisited is enabled.
+  // A deliberately-cleared empty set (reprotect on restart) has the key present
+  // and is left untouched.
+  if (visitedKeyAbsent) {
+    visitedTabs = new Set(openIds);
+    await setVisitedTabs([...visitedTabs]);
+  } else {
+    // Prune visited ids for tabs no longer open. Preserved otherwise (recycle).
+    let visitedPruned = false;
+    for (const id of visitedTabs) {
+      if (!openIds.has(id)) { visitedTabs.delete(id); visitedPruned = true; }
+    }
+    if (visitedPruned) await setVisitedTabs([...visitedTabs]);
   }
-  if (visitedPruned) await setVisitedTabs([...visitedTabs]);
 
   // Recover active tab from the query. The active tab is immune from closure
   // (immunity check), and onActivated will refresh its timer on the next switch.
@@ -419,17 +437,27 @@ let currentActiveTabId: number | undefined;
 export function setupTabListeners(): void {
   browser.tabs.onActivated.addListener(async ({ tabId }) => {
     await ensureReady();
-    // Update the tab we're LEAVING — its timer starts NOW, not when we arrived
     const prev = currentActiveTabId;
     currentActiveTabId = tabId;
 
-    const work = prev !== undefined && prev !== tabId
-      ? recordActivation(prev).then(() => recordActivation(tabId))
-      : recordActivation(tabId);
+    // Atomic (no await between) so an aging pass can never observe the activated
+    // tab as "visited but still expired" — reset its timer AND mark it visited
+    // together. Otherwise, on A -> unvisited-expired B, marking B visited before
+    // its timer reset lands would drop B's protection while it is still expired,
+    // and the pass could close the tab the user just opened.
+    tabTimes[tabId] = Date.now();
+    tabStages[tabId] = 0;
+    dirty = true;
+    const newlyVisited = !visitedTabs.has(tabId);
+    if (newlyVisited) visitedTabs.add(tabId);
 
-    work.catch(() => {});
-    // First focus of this tab: it counts as visited (start its aging clock).
-    markVisited(tabId).catch(() => {});
+    // Persist: the tab we're LEAVING (its timer starts now, not on arrival), the
+    // activated tab's timer, and the visited set.
+    (async () => {
+      if (prev !== undefined && prev !== tabId) await recordActivation(prev);
+      await flush();
+      if (newlyVisited) await setVisitedTabs([...visitedTabs]);
+    })().catch(() => {});
     browser.tabs.sendMessage(tabId, { type: 'RESET_AGING' }).catch(() => {});
   });
 

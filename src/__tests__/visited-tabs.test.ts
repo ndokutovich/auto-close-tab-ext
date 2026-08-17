@@ -35,10 +35,16 @@ vi.mock('webextension-polyfill', () => ({
     tabs: {
       query: vi.fn(async () => []),
       sendMessage: vi.fn(async () => {}),
+      onActivated: { addListener: vi.fn((fn: any) => { activatedHandler = fn; }) },
+      onCreated: { addListener: vi.fn() },
+      onRemoved: { addListener: vi.fn() },
+      onUpdated: { addListener: vi.fn() },
     },
-    idle: {},
+    idle: { onStateChanged: { addListener: vi.fn() }, setDetectionInterval: vi.fn() },
   },
 }));
+
+let activatedHandler: ((info: { tabId: number }) => any) | null = null;
 
 function setSettings(over: Record<string, unknown>) {
   store['settings'] = { ...(store['settings'] as object || {}), ...over };
@@ -60,6 +66,7 @@ async function load(openTabs: any[]) {
 
 describe('visited-tabs lifecycle', () => {
   it('markVisited adds a tab and persists it', async () => {
+    store['visitedTabs'] = []; // key present == not first run; tab 5 stays unvisited
     const tracker = await load([{ id: 5, active: false, url: 'https://a.com' }]);
     await tracker.initTracker();
 
@@ -68,6 +75,50 @@ describe('visited-tabs lifecycle', () => {
 
     expect(tracker.getVisitedTabIds()).toContain(5);
     expect(store['visitedTabs']).toEqual([5]);
+  });
+
+  it('seeds open tabs visited when the key is absent (first run / upgrade)', async () => {
+    // No visitedTabs key (e.g. an update from a version before the feature).
+    // Existing open tabs must be treated as visited, not retroactively protected.
+    store['tabTimes'] = { 1: Date.now(), 2: Date.now() };
+    const tracker = await load([
+      { id: 1, active: false, url: 'https://a.com' },
+      { id: 2, active: false, url: 'https://b.com' },
+    ]);
+    await tracker.initTracker();
+
+    expect(new Set(tracker.getVisitedTabIds())).toEqual(new Set([1, 2]));
+    expect(store['visitedTabs']).toBeDefined();
+  });
+
+  it('does not re-seed when the key is present but empty (reprotect-cleared)', async () => {
+    store['visitedTabs'] = []; // deliberately cleared
+    const tracker = await load([{ id: 1, active: false, url: 'https://a.com' }]);
+    await tracker.initTracker();
+
+    expect(tracker.getVisitedTabIds()).toEqual([]);
+  });
+
+  it('first activation resets the timer AND marks visited (no expired+visited window)', async () => {
+    // An unvisited tab with an already-expired timer. On activation it must end
+    // up BOTH visited AND with a fresh timer — never visited-while-expired, which
+    // would let an aging pass close the tab the user just opened.
+    const EXPIRED = Date.now() - 60 * 60 * 1000;
+    store['visitedTabs'] = [];
+    store['tabTimes'] = { 5: EXPIRED };
+    store['tabStages'] = { 5: 4 };
+
+    const tracker = await load([{ id: 5, active: true, url: 'https://a.com' }]);
+    await tracker.initTracker();
+    tracker.setupTabListeners();
+    expect(activatedHandler).toBeTypeOf('function');
+    expect(tracker.getVisitedTabIds()).not.toContain(5);
+
+    await activatedHandler!({ tabId: 5 });
+
+    expect(tracker.getVisitedTabIds()).toContain(5);           // now visited
+    const elapsed = Date.now() - tracker.getLastAccessed(5)!;  // and timer fresh
+    expect(elapsed).toBeLessThan(1000);
   });
 
   it('a newly created tab is not visited', async () => {
