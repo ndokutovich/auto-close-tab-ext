@@ -347,7 +347,9 @@ describe('session classification', () => {
   });
 
   it('classifies live after the grace window via an aging tick (event-less start)', async () => {
-    vi.useFakeTimers();
+    // Drive the MONOTONIC clock (performance.now), not wall time — the grace
+    // must be immune to Date.now() jumps.
+    const perf = vi.spyOn(performance, 'now').mockReturnValue(1000);
     try {
       seedTab(1, 5 * MINUTE);
 
@@ -358,21 +360,20 @@ describe('session classification', () => {
         { id: 1, active: false, pinned: false, url: 'https://a.com' } as any,
       ]);
 
-      await tracker.initTracker();
+      await tracker.initTracker(); // unclassifiedSince = 1000 (monotonic)
       expect(tracker.isSessionLive()).toBe(false);
 
-      // Past the grace window with no startup/install event.
-      vi.setSystemTime(Date.now() + 60_000);
+      perf.mockReturnValue(1000 + 60_000); // past the 45s grace
       await onAlarmFired({ name: 'aging-tabs-check' } as any);
 
       expect(tracker.isSessionLive()).toBe(true);
     } finally {
-      vi.useRealTimers();
+      perf.mockRestore();
     }
   });
 
   it('does NOT classify live within the grace window (protects the launch race)', async () => {
-    vi.useFakeTimers();
+    const perf = vi.spyOn(performance, 'now').mockReturnValue(1000);
     try {
       seedTab(1, 5 * MINUTE);
 
@@ -385,14 +386,42 @@ describe('session classification', () => {
 
       await tracker.initTracker();
 
-      // An aging tick well within the grace window must not classify live —
-      // onStartup's reset may still be pending on a genuine launch.
-      vi.setSystemTime(Date.now() + 5_000);
+      perf.mockReturnValue(1000 + 5_000); // within the grace
       await onAlarmFired({ name: 'aging-tabs-check' } as any);
 
       expect(tracker.isSessionLive()).toBe(false);
     } finally {
-      vi.useRealTimers();
+      perf.mockRestore();
+    }
+  });
+
+  it('a backward wall-clock jump does not stall classification (monotonic grace)', async () => {
+    // performance.now advances past the grace even though Date.now goes backward.
+    const perf = vi.spyOn(performance, 'now').mockReturnValue(1000);
+    const dateSpy = vi.spyOn(Date, 'now');
+    try {
+      seedTab(1, 5 * MINUTE);
+
+      const { onAlarmFired } = await import('../background/timer-manager');
+      const tracker = await import('../background/tab-tracker');
+      const browser = (await import('webextension-polyfill')).default;
+      vi.mocked(browser.tabs.query).mockResolvedValue([
+        { id: 1, active: false, pinned: false, url: 'https://a.com' } as any,
+      ]);
+
+      const realNow = Date.now();
+      dateSpy.mockReturnValue(realNow);
+      await tracker.initTracker();
+
+      // Wall clock corrected an hour backward; monotonic clock still advanced.
+      dateSpy.mockReturnValue(realNow - 3_600_000);
+      perf.mockReturnValue(1000 + 60_000);
+      await onAlarmFired({ name: 'aging-tabs-check' } as any);
+
+      expect(tracker.isSessionLive()).toBe(true);
+    } finally {
+      perf.mockRestore();
+      dateSpy.mockRestore();
     }
   });
 

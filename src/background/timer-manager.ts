@@ -81,7 +81,7 @@ export async function onAlarmFired(alarm: browser.Alarms.Alarm): Promise<void> {
   // (no onStartup/onInstalled — e.g. extension re-enable), classify it live so
   // closing resumes. A real launch classified via onStartup's reset long before
   // this, so it is a no-op there.
-  classifyLiveIfGraceElapsed(Date.now());
+  classifyLiveIfGraceElapsed();
 
   const settings = await getSettings();
 

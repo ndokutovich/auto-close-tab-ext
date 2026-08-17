@@ -27,10 +27,12 @@ let initPromise: Promise<void> | null = null;
 // cross-session tab ids in that window could remove a restored tab. A recycle
 // inside a live browser (session marker present) is classified live at once.
 let sessionLive = false;
-// When the session first became unclassified (marker absent). Used to bound the
-// close-deferral: after SESSION_CLASSIFY_GRACE_MS with no startup/install event,
-// classify live. In-memory only — a persisted alarm could survive a restart and
-// fire before onStartup, closing on stale ids.
+// Monotonic timestamp (performance.now) of when the session first became
+// unclassified (marker absent). Used to bound the close-deferral: after
+// SESSION_CLASSIFY_GRACE_MS with no startup/install event, classify live.
+// In-memory only — a persisted alarm could survive a restart and fire before
+// onStartup. performance.now, not Date.now, so a wall-clock correction cannot
+// stall (backward) or prematurely satisfy (forward) the grace.
 let unclassifiedSince: number | null = null;
 export function isSessionLive(): boolean {
   return sessionLive;
@@ -41,9 +43,9 @@ export function isSessionLive(): boolean {
  * grace window (no onStartup/onInstalled — e.g. extension re-enable, where the
  * browser is alive and ids are valid), classify it live so closing resumes.
  */
-export function classifyLiveIfGraceElapsed(now: number): void {
+export function classifyLiveIfGraceElapsed(): void {
   if (sessionLive || unclassifiedSince === null) return;
-  if (now - unclassifiedSince >= SESSION_CLASSIFY_GRACE_MS) markSessionLive();
+  if (performance.now() - unclassifiedSince >= SESSION_CLASSIFY_GRACE_MS) markSessionLive();
 }
 
 // Serialize all operations that touch tabTimes/idleSince/pausedSince to avoid
@@ -175,7 +177,7 @@ async function detectRecycle(): Promise<void> {
   // window elapses, bounding the deferral. In-memory only, so a restart cannot
   // carry a premature classification into the next session.
   if (!sessionLive) {
-    unclassifiedSince = Date.now();
+    unclassifiedSince = performance.now();
   }
 }
 

@@ -716,11 +716,14 @@ scenario('Title blink works without the title prefix', async () => {
     // automated run. A moving cursor keeps the session active.
     let maxStage = 0;
     let jiggle = 0;
-    const ageDeadline = Date.now() + 118000;
+    const ageDeadline = Date.now() + 140000;
     while (Date.now() < ageDeadline && maxStage < 3) {
-      jiggle = (jiggle + 7) % 50;
-      await parking.mouse.move(100 + jiggle, 100 + jiggle).catch(() => {});
-      await parking.waitForTimeout(2000);
+      // Hammer input every second so the OS idle detector (60s) never trips and
+      // idle compensation cannot shift the timer back, stalling aging.
+      jiggle = (jiggle + 13) % 60;
+      await parking.mouse.move(80 + jiggle, 80 + jiggle).catch(() => {});
+      await parking.keyboard.press('Shift').catch(() => {});
+      await parking.waitForTimeout(1000);
       const states = await probe.evaluate(async () => {
         try { return await browser.runtime.sendMessage({ type: 'GET_TAB_STATES' }); } catch { return null; }
       });
