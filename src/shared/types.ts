@@ -15,6 +15,12 @@ export interface Settings {
   stageThresholdMinutes: number[] | null;
   closeEmptyTabs: boolean;
   protectGroupedTabs: boolean;
+  // Opt-in: a tab never focused this session is immune (its timer starts only on
+  // the first visit), so a not-yet-triaged tab is not closed before you see it.
+  protectUnvisited: boolean;
+  // Only meaningful with protectUnvisited. false = tabs open at a browser restart
+  // age normally; true = restored tabs are re-protected until each is clicked.
+  reprotectRestoredTabs: boolean;
   expireAction: 'close' | 'discard';
   graveyardMaxSize: number;
   graveyardRetentionDays: number;
@@ -76,6 +82,7 @@ export type UiToBgMsg =
   | { type: 'LOCK_TAB'; tabId: number }
   | { type: 'UNLOCK_TAB'; tabId: number }
   | { type: 'GET_LOCKED_TABS' }
+  | { type: 'GET_VISITED_TABS' }
   | { type: 'GET_PAUSE_STATE' }
   | { type: 'SET_PAUSE_STATE'; paused: boolean }
   | { type: 'EXPORT_DATA' }

@@ -14,6 +14,7 @@ import {
   isPaused,
   isSessionLive,
   classifyLiveIfGraceElapsed,
+  getVisitedTabIds,
 } from './tab-tracker';
 import { buildImmunityContext, isImmune } from './immunity';
 import { buryTab, restoreTab, removeEntry, pruneExpiredEntries } from './graveyard';
@@ -149,7 +150,7 @@ async function applyAging(
   await loadCleanTitles(openTabIds);
 
   const lockedTabs = await getLockedTabs();
-  const immunityCtx = buildImmunityContext(settings, allTabs, lockedTabs);
+  const immunityCtx = buildImmunityContext(settings, allTabs, lockedTabs, getVisitedTabIds());
 
   const trackedIds = getAllTrackedTabIds();
   const tabsToClose: number[] = [];
@@ -271,7 +272,7 @@ async function repaintFrozenVisuals(settings: Settings): Promise<void> {
   const timeoutMs = settings.timeoutMinutes * 60 * 1000;
   const allTabs = await browser.tabs.query({});
   const tabMap = new Map(allTabs.map(t => [t.id!, t]));
-  const immunityCtx = buildImmunityContext(settings, allTabs, await getLockedTabs());
+  const immunityCtx = buildImmunityContext(settings, allTabs, await getLockedTabs(), getVisitedTabIds());
   for (const tabId of getAllTrackedTabIds()) {
     const tab = tabMap.get(tabId);
     if (!tab || tab.discarded) continue;
@@ -301,7 +302,7 @@ export async function currentAgingMessageFor(tabId: number): Promise<BgToContent
   const allTabs = await browser.tabs.query({});
   const tab = allTabs.find(t => t.id === tabId);
   if (!tab) return null;
-  const immunityCtx = buildImmunityContext(settings, allTabs, await getLockedTabs());
+  const immunityCtx = buildImmunityContext(settings, allTabs, await getLockedTabs(), getVisitedTabIds());
   if (isImmune(tab, immunityCtx)) return null;
 
   const timeoutMs = settings.timeoutMinutes * 60 * 1000;

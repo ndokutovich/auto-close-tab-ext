@@ -34,6 +34,10 @@
   "hintCloseEmpty": { "message": "Auto-close about:blank and new tab pages when inactive" },
   "labelProtectGroups": { "message": "Protect grouped tabs" },
   "hintProtectGroups": { "message": "Tabs in a group are immune to auto-close (Firefox 138+ / Chrome)" },
+  "labelProtectUnvisited": { "message": "Don't age tabs until first opened" },
+  "hintProtectUnvisited": { "message": "A tab you open but never look at stays untouched; its timer starts when you first visit it" },
+  "labelReprotectRestored": { "message": "Re-protect restored tabs after restart" },
+  "hintReprotectRestored": { "message": "After a browser restart, restored tabs are protected again until you click each one. Off: they age normally." },
 
   "sectionVisual": { "message": "Visual Aging" },
   "labelFavicon": { "message": "Favicon dimming" },

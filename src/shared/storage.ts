@@ -36,6 +36,8 @@ export async function saveSettings(partial: Partial<Settings>): Promise<Settings
     stageThresholdMinutes: normalizeStageThresholds(merged.stageThresholdMinutes, timeoutMinutes),
     closeEmptyTabs: !!merged.closeEmptyTabs,
     protectGroupedTabs: !!merged.protectGroupedTabs,
+    protectUnvisited: !!merged.protectUnvisited,
+    reprotectRestoredTabs: !!merged.reprotectRestoredTabs,
     expireAction: merged.expireAction === 'discard' ? 'discard' : 'close',
     whitelistedDomains: Array.isArray(merged.whitelistedDomains)
       ? merged.whitelistedDomains.filter((d): d is string => typeof d === 'string').slice(0, 100)
@@ -145,6 +147,22 @@ export async function getLockedTabs(): Promise<number[]> {
 
 export async function setLockedTabs(tabIds: number[]): Promise<void> {
   await browser.storage.local.set({ [STORAGE_KEYS.LOCKED_TABS]: tabIds });
+}
+
+// --- Visited tabs (tabs that have been focused at least once this session) ---
+
+export async function getVisitedTabs(): Promise<number[]> {
+  try {
+    const result = await browser.storage.local.get(STORAGE_KEYS.VISITED_TABS);
+    const data = result[STORAGE_KEYS.VISITED_TABS];
+    return Array.isArray(data) ? data.filter((id): id is number => typeof id === 'number') : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function setVisitedTabs(tabIds: number[]): Promise<void> {
+  await browser.storage.local.set({ [STORAGE_KEYS.VISITED_TABS]: tabIds });
 }
 
 export async function lockTab(tabId: number): Promise<number[]> {

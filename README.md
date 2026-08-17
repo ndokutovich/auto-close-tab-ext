@@ -11,7 +11,7 @@ Growing tab count causes decision paralysis — you keep tabs open "just in case
 1. **Visual aging** — inactive tab favicons progressively desaturate. Optional title prefix shows emoji indicators, and optional blinking marks the last two stages
 2. **Auto-close** — tabs inactive beyond a configurable timeout (default 30 min) are closed. Alternative: discard mode unloads from memory without closing
 3. **Graveyard** — every auto-closed tab is saved to a searchable list with one-click restore. Sort by recent, domain, or alphabetically. Export/import as JSON
-4. **Smart immunity** — pinned tabs, locked tabs, audible tabs, grouped tabs, whitelisted domains, and the active tab are never closed
+4. **Smart immunity** — pinned tabs, locked tabs, audible tabs, grouped tabs, whitelisted domains, and the active tab are never closed. Optionally, tabs you've opened but never visited are protected too, until you first look at them
 5. **Idle awareness** — aging pauses when you're away from the computer and resumes when you return
 6. **Notification + undo** — browser notification on close with click-to-restore
 

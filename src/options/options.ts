@@ -10,6 +10,9 @@ const minTabsInput = document.getElementById('minTabs') as HTMLInputElement;
 const expireActionSelect = document.getElementById('expireAction') as HTMLSelectElement;
 const closeEmptyToggle = document.getElementById('closeEmptyTabs') as HTMLInputElement;
 const protectGroupsToggle = document.getElementById('protectGroupedTabs') as HTMLInputElement;
+const protectUnvisitedToggle = document.getElementById('protectUnvisited') as HTMLInputElement;
+const reprotectRestoredToggle = document.getElementById('reprotectRestoredTabs') as HTMLInputElement;
+const reprotectRestoredField = document.getElementById('reprotect-restored-field')!;
 const faviconToggle = document.getElementById('faviconDimming') as HTMLInputElement;
 const titleToggle = document.getElementById('titlePrefix') as HTMLInputElement;
 const titleBlinkToggle = document.getElementById('titleBlink') as HTMLInputElement;
@@ -40,6 +43,9 @@ function applySettingsToForm(settings: Settings): void {
   expireActionSelect.value = settings.expireAction;
   closeEmptyToggle.checked = settings.closeEmptyTabs;
   protectGroupsToggle.checked = settings.protectGroupedTabs;
+  protectUnvisitedToggle.checked = settings.protectUnvisited;
+  reprotectRestoredToggle.checked = settings.reprotectRestoredTabs;
+  reprotectRestoredField.hidden = !settings.protectUnvisited;
   faviconToggle.checked = settings.faviconDimming;
   titleToggle.checked = settings.titlePrefix;
   titleBlinkToggle.checked = settings.titleBlink;
@@ -131,6 +137,11 @@ customStagesToggle.addEventListener('change', () => {
 // stage values must sit under.
 timeoutInput.addEventListener('input', refreshCustomStageAvailability);
 
+// The restart sub-option only applies when unvisited protection is on.
+protectUnvisitedToggle.addEventListener('change', () => {
+  reprotectRestoredField.hidden = !protectUnvisitedToggle.checked;
+});
+
 async function loadSettings(): Promise<void> {
   applySettingsToForm(await browser.runtime.sendMessage({ type: 'GET_SETTINGS' }));
 }
@@ -155,6 +166,8 @@ async function saveSettings(): Promise<void> {
     expireAction: expireActionSelect.value as 'close' | 'discard',
     closeEmptyTabs: closeEmptyToggle.checked,
     protectGroupedTabs: protectGroupsToggle.checked,
+    protectUnvisited: protectUnvisitedToggle.checked,
+    reprotectRestoredTabs: reprotectRestoredToggle.checked,
     faviconDimming: faviconToggle.checked,
     titlePrefix: titleToggle.checked,
     titleBlink: titleBlinkToggle.checked,

@@ -50,6 +50,16 @@
         <p class="hint" data-i18n="hintProtectGroups">Tabs in a group are immune to auto-close (Firefox 138+ / Chrome)</p>
         <input type="checkbox" id="protectGroupedTabs">
       </div>
+      <div class="field toggle">
+        <label for="protectUnvisited" data-i18n="labelProtectUnvisited">Don't age tabs until first opened</label>
+        <p class="hint" data-i18n="hintProtectUnvisited">A tab you open but never look at stays untouched; its timer starts when you first visit it</p>
+        <input type="checkbox" id="protectUnvisited">
+      </div>
+      <div class="field toggle" id="reprotect-restored-field" hidden>
+        <label for="reprotectRestoredTabs" data-i18n="labelReprotectRestored">Re-protect restored tabs after restart</label>
+        <p class="hint" data-i18n="hintReprotectRestored">After a browser restart, restored tabs are protected again until you click each one. Off: they age normally.</p>
+        <input type="checkbox" id="reprotectRestoredTabs">
+      </div>
     </section>
 
     <section class="section">

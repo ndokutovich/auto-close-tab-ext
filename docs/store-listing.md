@@ -47,6 +47,7 @@ Don't want to close tabs? Switch to discard mode — tabs stay visible but unloa
 - Min tab count floor (set to 0 for no limit)
 - Close empty tabs on/off
 - Protect grouped tabs on/off
+- Protect unvisited tabs — don't age a tab until you first open it (off by default)
 
 **Privacy First**
 All data stays in your browser. No accounts, no servers, no tracking, nothing sent anywhere. The only request it ever makes is re-fetching a tab's own favicon to dim it, when that icon can't be read back from the page — a cross-origin/CDN icon, or the fallback favicon. It sends no cookies and never reaches private hosts.

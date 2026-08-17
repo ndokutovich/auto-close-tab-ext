@@ -2,7 +2,7 @@ import browser from 'webextension-polyfill';
 import type { ExtensionMessage } from '../shared/types';
 import { getSettings, saveSettings, getGraveyard, getLockedTabs, lockTab, unlockTab, exportAllData, importData } from '../shared/storage';
 import { restoreTab, removeEntry, clearAll } from './graveyard';
-import { getAllTrackedTabIds, getLastAccessed, getStage, ensureReady, isPaused, setPause } from './tab-tracker';
+import { getAllTrackedTabIds, getLastAccessed, getStage, ensureReady, isPaused, setPause, getVisitedTabIds } from './tab-tracker';
 import { refreshVisualsForAllTabs, currentAgingMessageFor } from './timer-manager';
 import { syncBadge } from './graveyard';
 
@@ -224,6 +224,9 @@ export function setupMessageListener(): void {
 
         case 'GET_LOCKED_TABS':
           return getLockedTabs();
+
+        case 'GET_VISITED_TABS':
+          return ensureReady().then(() => getVisitedTabIds());
 
         case 'GET_PAUSE_STATE':
           return ensureReady().then(() => ({ paused: isPaused() }));

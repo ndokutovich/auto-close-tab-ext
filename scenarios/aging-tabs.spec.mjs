@@ -806,6 +806,70 @@ scenario('Custom stage timings round-trip', async () => {
   await options.close();
 });
 
+scenario('Unvisited tab is protected until first opened', async () => {
+  const probe = await openOptions();
+  const visited = async () => probe.evaluate(async () =>
+    browser.runtime.sendMessage({ type: 'GET_VISITED_TABS' }).catch(() => []));
+  const states = async () => probe.evaluate(async () =>
+    browser.runtime.sendMessage({ type: 'GET_TAB_STATES' }).catch(() => ({})));
+
+  try {
+    await setSettings({ timeoutMinutes: 1, minTabCount: 0, protectUnvisited: true, reprotectRestoredTabs: false, faviconDimming: true, titlePrefix: false, titleBlink: false });
+
+    // A launcher page with a link; ctrl-click opens the target in a BACKGROUND
+    // tab (never activated) — the genuine "unvisited" path.
+    const launcher = await context.newPage();
+    await launcher.setContent('<a id="lnk" href="https://example.com/">open</a>');
+    await launcher.bringToFront();
+
+    const before = new Set(Object.keys(await states()).map(Number));
+    const opened = context.waitForEvent('page');
+    await launcher.click('#lnk', { modifiers: ['Control'] });
+    const bgPage = await opened;
+    await bgPage.waitForLoadState('domcontentloaded').catch(() => {});
+
+    // Identify the new tab's id (the one that appeared).
+    await launcher.waitForTimeout(1500);
+    const afterIds = Object.keys(await states()).map(Number);
+    const newId = afterIds.find(id => !before.has(id));
+    if (newId === undefined) throw new Error('New background tab was not tracked');
+
+    // It must be tracked but NOT visited.
+    if ((await visited()).includes(newId)) throw new Error('Background tab wrongly marked visited');
+
+    // Age past the 1-minute timeout while parked on the launcher. A visited
+    // background tab would have reached a high stage / closed; this one must
+    // stay at stage 0 and still exist. Jiggle input to avoid idle stalls.
+    let jig = 0;
+    const deadline = Date.now() + 80000;
+    while (Date.now() < deadline) {
+      jig = (jig + 11) % 60;
+      await launcher.mouse.move(70 + jig, 70 + jig).catch(() => {});
+      await launcher.waitForTimeout(1500);
+      const st = (await states())[newId];
+      if (st && st.stage > 0) throw new Error(`Unvisited tab aged to stage ${st.stage} — protection failed`);
+    }
+    // Still open and still stage 0.
+    if (bgPage.isClosed()) throw new Error('Unvisited tab was closed despite protection');
+    if ((await states())[newId]?.stage !== 0) throw new Error('Unvisited tab left stage 0');
+
+    // Now visit it: bring to front → onActivated → visited → ages.
+    await bgPage.bringToFront();
+    let becameVisited = false;
+    for (let i = 0; i < 10 && !becameVisited; i++) {
+      await bgPage.waitForTimeout(500);
+      becameVisited = (await visited()).includes(newId);
+    }
+    if (!becameVisited) throw new Error('Tab did not become visited on activation');
+
+    await bgPage.close().catch(() => {});
+    await launcher.close().catch(() => {});
+  } finally {
+    await probe.close().catch(() => {});
+    await setSettings({ timeoutMinutes: 30, minTabCount: 3, protectUnvisited: false, reprotectRestoredTabs: false, faviconDimming: true, titlePrefix: false, titleBlink: false });
+  }
+});
+
 scenario('Russian locale', async () => {
   // Launch a separate context with Russian locale
   let ruContext;

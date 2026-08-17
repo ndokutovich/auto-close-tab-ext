@@ -7,6 +7,7 @@ export interface ImmunityContext {
   activeTabId: number | undefined;
   totalTabCount: number;
   lockedTabIds: Set<number>;
+  visitedTabIds: Set<number>;
 }
 
 const EMPTY_TAB_URLS = ['about:blank', 'about:newtab', 'chrome://newtab/'];
@@ -14,7 +15,8 @@ const EMPTY_TAB_URLS = ['about:blank', 'about:newtab', 'chrome://newtab/'];
 export function buildImmunityContext(
   settings: Settings,
   tabs: browser.Tabs.Tab[],
-  lockedTabIds: number[] = []
+  lockedTabIds: number[] = [],
+  visitedTabIds: number[] = []
 ): ImmunityContext {
   const activeTab = tabs.find(t => t.active);
   return {
@@ -22,6 +24,7 @@ export function buildImmunityContext(
     activeTabId: activeTab?.id,
     totalTabCount: tabs.length,
     lockedTabIds: new Set(lockedTabIds),
+    visitedTabIds: new Set(visitedTabIds),
   };
 }
 
@@ -33,6 +36,13 @@ export function isImmune(
   if (tab.pinned) return true;
   if (tab.audible) return true;
   if (tab.id !== undefined && ctx.lockedTabIds.has(tab.id)) return true;
+
+  // Protect a tab that has never been focused this session (opt-in): its aging
+  // clock should start when you first look at it, not when it was opened.
+  if (ctx.settings.protectUnvisited && tab.id !== undefined && !ctx.visitedTabIds.has(tab.id)) {
+    return true;
+  }
+
   if (ctx.totalTabCount <= ctx.settings.minTabCount) return true;
 
   // Tab groups protection (FF 138+ / Chrome)

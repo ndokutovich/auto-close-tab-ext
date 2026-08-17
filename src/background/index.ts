@@ -33,7 +33,7 @@ async function init(freshInstall: boolean, freshSession: boolean): Promise<void>
     // version) starts the session fresh: tab ids are reassigned on restore, so
     // persisted per-id timers/locks are not trustworthy. Done before content
     // injection so scripts paint from the reset state.
-    if (freshSession) await resetTimersForNewSession();
+    if (freshSession) await resetTimersForNewSession(freshInstall);
     // Any init here comes from a real startup/install/update event, which
     // classifies the session as safe to close tabs in (resetTimersForNewSession
     // already marks it; this covers the no-reset update path).

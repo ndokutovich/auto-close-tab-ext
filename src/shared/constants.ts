@@ -8,6 +8,8 @@ export const DEFAULT_SETTINGS: Settings = {
   stageThresholdMinutes: null,
   closeEmptyTabs: true,
   protectGroupedTabs: true,
+  protectUnvisited: false,
+  reprotectRestoredTabs: false,
   expireAction: 'close',
   graveyardMaxSize: 200,
   graveyardRetentionDays: 0,
@@ -66,6 +68,7 @@ export const STORAGE_KEYS = {
   LOCKED_TABS: 'lockedTabs',
   PAUSED_SINCE: 'pausedSince',
   IDLE_SINCE: 'idleSince',
+  VISITED_TABS: 'visitedTabs',
 } as const;
 
 // storage.session key. Present == this service worker is a *recycle* inside a

@@ -3,6 +3,7 @@ import type { AgingStage } from '../shared/types';
 import {
   getTabTimes, setTabTimes, getTabStages, setTabStages, unlockTab,
   getPausedSince, setPausedSince, getLockedTabs, setLockedTabs,
+  getVisitedTabs, setVisitedTabs, getSettings,
 } from '../shared/storage';
 import { shiftTabTimes } from '../shared/pure';
 import {
@@ -14,6 +15,9 @@ import { clearCachedTitle } from './timer-manager';
 // In-memory cache, flushed to storage when dirty
 let tabTimes: Record<number, number> = {};
 let tabStages: Record<number, AgingStage> = {};
+// Tab ids focused at least once this session. Absence == unvisited. Persisted
+// so a service-worker recycle preserves it; reset with the session on restart.
+let visitedTabs = new Set<number>();
 let initialized = false;
 let dirty = false;
 let idleSince: number | null = null;
@@ -66,6 +70,7 @@ export async function initTracker(freshInstall = false): Promise<void> {
   // Load persisted state
   tabTimes = await getTabTimes();
   tabStages = await getTabStages();
+  visitedTabs = new Set(await getVisitedTabs());
 
   const idleRes = await browser.storage.local.get(STORAGE_KEYS.IDLE_SINCE);
   idleSince = typeof idleRes.idleSince === 'number' ? idleRes.idleSince : null;
@@ -124,6 +129,13 @@ export async function initTracker(freshInstall = false): Promise<void> {
   if (prunedLocked.length < lockedTabs.length) {
     await setLockedTabs(prunedLocked);
   }
+
+  // Prune visited ids for tabs no longer open. Preserved otherwise (recycle).
+  let visitedPruned = false;
+  for (const id of visitedTabs) {
+    if (!openIds.has(id)) { visitedTabs.delete(id); visitedPruned = true; }
+  }
+  if (visitedPruned) await setVisitedTabs([...visitedTabs]);
 
   // Recover active tab from the query. The active tab is immune from closure
   // (immunity check), and onActivated will refresh its timer on the next switch.
@@ -242,7 +254,7 @@ async function compensateInactiveTime(now: number): Promise<void> {
  * force-writes at the end so a concurrent aging flush that cleared `dirty` in
  * between cannot make the reset non-persistent.
  */
-export function resetTimersForNewSession(): Promise<void> {
+export function resetTimersForNewSession(freshInstall = false): Promise<void> {
   const task = idleOpChain.then(async () => {
     await ensureReady();
     const now = Date.now();
@@ -256,9 +268,25 @@ export function resetTimersForNewSession(): Promise<void> {
     }
     const locked = await getLockedTabs();
     if (locked.length > 0) await setLockedTabs([]);
+
+    // Visited-set policy for the new session. A fresh install always seeds the
+    // already-open tabs as visited (never protect a user's existing tabs on
+    // first run). On a restart, honour reprotectRestoredTabs: default seeds them
+    // visited (age normally), else clears the set (restored tabs re-protected
+    // until clicked). At this point Object.keys(tabTimes) == all open tabs.
+    const settings = await getSettings();
+    const seedVisited = freshInstall || !settings.reprotectRestoredTabs;
+    visitedTabs = seedVisited
+      ? new Set(Object.keys(tabTimes).map(Number))
+      : new Set();
+
     // Force-write: do not depend on `dirty`, which a racing flush may have
     // cleared after our mutation.
-    await Promise.all([setTabTimes(tabTimes), setTabStages(tabStages)]);
+    await Promise.all([
+      setTabTimes(tabTimes),
+      setTabStages(tabStages),
+      setVisitedTabs([...visitedTabs]),
+    ]);
     dirty = false;
     markSessionLive();
   });
@@ -336,9 +364,28 @@ export async function recordNewTab(tabId: number): Promise<void> {
   await flush();
 }
 
+/**
+ * Mark a tab visited (has been focused). Called ONLY from the onActivated
+ * listener — never from recordActivation, which is shared with onUpdated and
+ * would let a background tab's self-navigation clear its unvisited protection.
+ */
+export async function markVisited(tabId: number): Promise<void> {
+  if (visitedTabs.has(tabId)) return;
+  visitedTabs.add(tabId);
+  await setVisitedTabs([...visitedTabs]);
+}
+
+/** Snapshot of visited tab ids, for immunity context. */
+export function getVisitedTabIds(): number[] {
+  return [...visitedTabs];
+}
+
 export function removeTab(tabId: number): void {
   delete tabTimes[tabId];
   delete tabStages[tabId];
+  if (visitedTabs.delete(tabId)) {
+    setVisitedTabs([...visitedTabs]).catch(() => {});
+  }
   dirty = true;
 }
 
@@ -381,6 +428,8 @@ export function setupTabListeners(): void {
       : recordActivation(tabId);
 
     work.catch(() => {});
+    // First focus of this tab: it counts as visited (start its aging clock).
+    markVisited(tabId).catch(() => {});
     browser.tabs.sendMessage(tabId, { type: 'RESET_AGING' }).catch(() => {});
   });
 
