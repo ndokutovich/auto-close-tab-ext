@@ -119,6 +119,61 @@ describe('visited-tabs lifecycle', () => {
     expect(tracker.getVisitedTabIds()).toContain(5);           // now visited
     const elapsed = Date.now() - tracker.getLastAccessed(5)!;  // and timer fresh
     expect(elapsed).toBeLessThan(1000);
+    expect(store['visitedTabs']).toContain(5);                 // and persisted
+  });
+
+  it('persists visited even if the timer flush fails (independent write)', async () => {
+    store['visitedTabs'] = [];
+    store['tabTimes'] = { 1: Date.now(), 5: Date.now() };
+
+    const tracker = await load([
+      { id: 1, active: false, url: 'https://a.com' },
+      { id: 5, active: true, url: 'https://b.com' },
+    ]);
+    await tracker.initTracker();
+    tracker.setupTabListeners();
+
+    // Make the timer-persist path (setTabTimes) reject; the visited write must
+    // still land, so a recycle would not reload the tab as unvisited.
+    const browser = (await import('webextension-polyfill')).default;
+    const realSet = browser.storage.local.set;
+    (browser.storage.local.set as any) = vi.fn(async (items: Record<string, unknown>) => {
+      if ('tabTimes' in items) throw new Error('timer write failed');
+      return (realSet as any)(items);
+    });
+    try {
+      // Switch from tab 1 (prev) to unvisited tab 5.
+      await activatedHandler!({ tabId: 1 });
+      await activatedHandler!({ tabId: 5 });
+      await new Promise(r => setTimeout(r, 0));
+
+      expect(store['visitedTabs']).toContain(5);
+    } finally {
+      browser.storage.local.set = realSet;
+    }
+  });
+
+  it('does not wedge init when the visited-key read fails (falls back to seed)', async () => {
+    store['tabTimes'] = { 1: Date.now() };
+    const browser = (await import('webextension-polyfill')).default;
+    const realGet = browser.storage.local.get;
+    (browser.storage.local.get as any) = vi.fn(async (keys: any) => {
+      if (keys === 'visitedTabs') throw new Error('read failed');
+      return (realGet as any)(keys);
+    });
+    try {
+      const tracker = await import('../background/tab-tracker');
+      vi.mocked(browser.tabs.query).mockResolvedValue([
+        { id: 1, active: false, url: 'https://a.com' } as any,
+      ]);
+
+      // Must resolve, not reject (a rejected initPromise would wedge ensureReady).
+      await expect(tracker.initTracker()).resolves.not.toThrow();
+      // Safe direction: the open tab is seeded visited.
+      expect(tracker.getVisitedTabIds()).toContain(1);
+    } finally {
+      browser.storage.local.get = realGet;
+    }
   });
 
   it('a newly created tab is not visited', async () => {

@@ -70,14 +70,22 @@ export async function initTracker(freshInstall = false): Promise<void> {
   // Load persisted state
   tabTimes = await getTabTimes();
   tabStages = await getTabStages();
-  const visitedRaw = await browser.storage.local.get(STORAGE_KEYS.VISITED_TABS);
   // Distinguish "never initialized" (key absent — e.g. an update from a version
   // before this feature) from a deliberately-empty set (reprotect cleared it).
-  const visitedKeyAbsent = !(STORAGE_KEYS.VISITED_TABS in visitedRaw);
-  const visitedData = visitedRaw[STORAGE_KEYS.VISITED_TABS];
-  visitedTabs = new Set(Array.isArray(visitedData)
-    ? visitedData.filter((id): id is number => typeof id === 'number')
-    : []);
+  // A read failure must not reject init (which would wedge ensureReady); default
+  // to the safe direction — treat as absent so open tabs are seeded visited
+  // (worst case a genuinely-unvisited tab ages, never a wrongful protection).
+  let visitedKeyAbsent = true;
+  try {
+    const visitedRaw = await browser.storage.local.get(STORAGE_KEYS.VISITED_TABS);
+    visitedKeyAbsent = !(STORAGE_KEYS.VISITED_TABS in visitedRaw);
+    const visitedData = visitedRaw[STORAGE_KEYS.VISITED_TABS];
+    visitedTabs = new Set(Array.isArray(visitedData)
+      ? visitedData.filter((id): id is number => typeof id === 'number')
+      : []);
+  } catch {
+    visitedTabs = new Set();
+  }
 
   const idleRes = await browser.storage.local.get(STORAGE_KEYS.IDLE_SINCE);
   idleSince = typeof idleRes.idleSince === 'number' ? idleRes.idleSince : null;
@@ -145,14 +153,16 @@ export async function initTracker(freshInstall = false): Promise<void> {
   // and is left untouched.
   if (visitedKeyAbsent) {
     visitedTabs = new Set(openIds);
-    await setVisitedTabs([...visitedTabs]);
+    // Best-effort persist — a write failure must not wedge init; memory is
+    // authoritative for this run and the next healthy run re-seeds.
+    setVisitedTabs([...visitedTabs]).catch(() => {});
   } else {
     // Prune visited ids for tabs no longer open. Preserved otherwise (recycle).
     let visitedPruned = false;
     for (const id of visitedTabs) {
       if (!openIds.has(id)) { visitedTabs.delete(id); visitedPruned = true; }
     }
-    if (visitedPruned) await setVisitedTabs([...visitedTabs]);
+    if (visitedPruned) setVisitedTabs([...visitedTabs]).catch(() => {});
   }
 
   // Recover active tab from the query. The active tab is immune from closure
@@ -451,12 +461,17 @@ export function setupTabListeners(): void {
     const newlyVisited = !visitedTabs.has(tabId);
     if (newlyVisited) visitedTabs.add(tabId);
 
-    // Persist: the tab we're LEAVING (its timer starts now, not on arrival), the
-    // activated tab's timer, and the visited set.
+    // Persist the visited set INDEPENDENTLY — not chained behind the timer
+    // flush, so a timer-write failure cannot suppress the visited write and
+    // leave the tab reloading as unvisited (and wrongly protected) after a
+    // recycle.
+    if (newlyVisited) setVisitedTabs([...visitedTabs]).catch(() => {});
+
+    // Persist the leaving tab's timer (starts now, not on arrival) and this
+    // tab's freshly-reset timer.
     (async () => {
       if (prev !== undefined && prev !== tabId) await recordActivation(prev);
       await flush();
-      if (newlyVisited) await setVisitedTabs([...visitedTabs]);
     })().catch(() => {});
     browser.tabs.sendMessage(tabId, { type: 'RESET_AGING' }).catch(() => {});
   });
