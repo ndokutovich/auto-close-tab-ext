@@ -38,6 +38,22 @@ function validate(platform, copy, lang) {
   return issues;
 }
 
+// --- App Store Connect sanitisation ---
+// ASC rejects emoji and box-drawing characters in the description field.
+// Chrome / Firefox accept them, so only the Safari listing is sanitised.
+
+function toAppStoreSafe(text) {
+  return text
+    .replace(/^[━─═]{3,}$/gm, '-'.repeat(23))
+    .replace(/\p{Extended_Pictographic}️?/gu, '')
+    .replace(/[→←↑↓]/g, '->')
+    .replace(/\(\s*\)/g, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/ +([,.;:])/g, '$1')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 // --- Section renderers ---
 
 function section(heading) {
@@ -82,10 +98,10 @@ function renderKeywords(copy, plat) {
   return section(`Keywords (${len}/${max} chars)`) + `\n\`\`\`\n${copy.keywords}\n\`\`\`\n`;
 }
 
-function renderFullDescription(copy, plat) {
+function renderFullDescription(copy, plat, text = copy.fullDescription) {
   const max = plat.limits?.fullDescription;
-  const len = [...copy.fullDescription].length;
-  return section(`Full description (${len}/${max} chars)`) + `\n\`\`\`\n${copy.fullDescription}\n\`\`\`\n`;
+  const len = [...text].length;
+  return section(`Full description (${len}/${max} chars)`) + `\n\`\`\`\n${text}\n\`\`\`\n`;
 }
 
 function renderSinglePurpose(copy, plat) {
@@ -163,7 +179,11 @@ function renderPlatformDoc(platformKey, plat) {
     parts.push(renderShortDesc(copy, plat));
     parts.push(renderPromoText(copy, plat));
     parts.push(renderKeywords(copy, plat));
-    parts.push(renderFullDescription(copy, plat));
+    parts.push(renderFullDescription(
+      copy,
+      plat,
+      platformKey === 'safari' ? toAppStoreSafe(copy.fullDescription) : copy.fullDescription,
+    ));
     parts.push(renderSinglePurpose(copy, plat));
     parts.push(renderPermissions(copy, plat));
     if (lang === 'en') parts.push(renderDataDisclosure(plat));

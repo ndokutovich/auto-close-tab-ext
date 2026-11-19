@@ -29,18 +29,18 @@ tabs,productivity,auto close,tab manager,focus,memory,session
 ```
 
 
-## Full description (2674/4000 chars)
+## Full description (2664/4000 chars)
 
 ```
 Aging Tabs auto-closes inactive tabs — but instead of ripping them away without warning, it fades them out so you can see it coming and a searchable graveyard lets you bring anything back with one click.
 
 Inspired by the original Aging Tabs (Dao Gottwald, ~2008) that died with Firefox 57. Rebuilt from scratch for Manifest V3, with modern features and zero external services.
 
-━━━━━━━━━━━━━━━━━━━━━━━
+-----------------------
 WHAT IT DOES
-━━━━━━━━━━━━━━━━━━━━━━━
+-----------------------
 
-• Visual aging — favicons progressively desaturate across 5 stages (0% → 100% grayscale) as tabs sit untouched. Optional emoji title prefix (⏳ 💤 👻 ⚠️) makes the timer visible at a glance.
+• Visual aging — favicons progressively desaturate across 5 stages (0% -> 100% grayscale) as tabs sit untouched. Optional emoji title prefix makes the timer visible at a glance.
 
 • Auto-close with a safety net — tabs inactive beyond the configured timeout (default 30 min) are closed. Every closed tab is saved to a searchable graveyard with one-click restore.
 
@@ -52,9 +52,9 @@ WHAT IT DOES
 
 • Lock individual tabs — right-click any tab or press Alt+L to lock it. Locked tabs are excluded from auto-close until you unlock.
 
-━━━━━━━━━━━━━━━━━━━━━━━
+-----------------------
 THE GRAVEYARD
-━━━━━━━━━━━━━━━━━━━━━━━
+-----------------------
 
 Every auto-closed tab is saved to a local graveyard:
 • Instant text search across title, URL, domain
@@ -63,9 +63,9 @@ Every auto-closed tab is saved to a local graveyard:
 • JSON export/import for backup
 • Capped history (configurable) — set to 0 for unlimited
 
-━━━━━━━━━━━━━━━━━━━━━━━
+-----------------------
 CUSTOMIZE EVERYTHING
-━━━━━━━━━━━━━━━━━━━━━━━
+-----------------------
 
 • Timeout: any duration in minutes
 • Minimum tab count: floor below which nothing closes
@@ -78,9 +78,9 @@ CUSTOMIZE EVERYTHING
 • Domain whitelist
 • Browser notifications with click-to-restore
 
-━━━━━━━━━━━━━━━━━━━━━━━
+-----------------------
 PRIVACY FIRST
-━━━━━━━━━━━━━━━━━━━━━━━
+-----------------------
 
 • No data leaves your browser
 • No analytics, no telemetry, no remote servers
@@ -91,9 +91,9 @@ PRIVACY FIRST
 Privacy policy: https://github.com/ndokutovich/auto-close-tab-ext/blob/main/PRIVACY_POLICY.md
 Source code: https://github.com/ndokutovich/auto-close-tab-ext
 
-━━━━━━━━━━━━━━━━━━━━━━━
+-----------------------
 LANGUAGES
-━━━━━━━━━━━━━━━━━━━━━━━
+-----------------------
 
 English, Русский
 ```
@@ -132,18 +132,18 @@ English, Русский
 ```
 
 
-## Full description (3079/4000 chars)
+## Full description (3069/4000 chars)
 
 ```
 Aging Tabs автоматически закрывает неактивные вкладки — но не грубо, без предупреждения, а плавно: вкладки визуально блёкнут, и вы видите, что время на исходе. Все закрытые вкладки попадают в поисковое «кладбище», откуда любую можно вернуть в один клик.
 
 Расширение вдохновлено оригинальным Aging Tabs (Dao Gottwald, ~2008), который умер вместе с Firefox 57. Полностью переписано с нуля под Manifest V3, с современными функциями и без каких-либо внешних сервисов.
 
-━━━━━━━━━━━━━━━━━━━━━━━
+-----------------------
 ЧТО ДЕЛАЕТ
-━━━━━━━━━━━━━━━━━━━━━━━
+-----------------------
 
-• Визуальное старение — фавиконы постепенно обесцвечиваются в 5 этапов (0% → 100% серого), пока вкладка не используется. Опциональный префикс-эмодзи в заголовке (⏳ 💤 👻 ⚠️) делает таймер заметным с одного взгляда.
+• Визуальное старение — фавиконы постепенно обесцвечиваются в 5 этапов (0% -> 100% серого), пока вкладка не используется. Опциональный префикс-эмодзи в заголовке делает таймер заметным с одного взгляда.
 
 • Автозакрытие со страховкой — вкладки, неактивные дольше заданного таймаута (по умолчанию 30 минут), закрываются. Каждая закрытая вкладка сохраняется в поисковое «кладбище» с одноклик-восстановлением.
 
@@ -155,9 +155,9 @@ Aging Tabs автоматически закрывает неактивные в
 
 • Блокировка отдельных вкладок — кликните правой кнопкой или нажмите Alt+L, чтобы защитить конкретную вкладку от автозакрытия. Заблокированные вкладки исключаются из автозакрытия, пока не разблокируете.
 
-━━━━━━━━━━━━━━━━━━━━━━━
+-----------------------
 КЛАДБИЩЕ
-━━━━━━━━━━━━━━━━━━━━━━━
+-----------------------
 
 Каждая автозакрытая вкладка сохраняется в локальное кладбище:
 • Мгновенный поиск по заголовку, URL и домену
@@ -166,9 +166,9 @@ Aging Tabs автоматически закрывает неактивные в
 • Экспорт/импорт в JSON для бэкапа
 • Настраиваемый лимит истории — поставьте 0 для неограниченного
 
-━━━━━━━━━━━━━━━━━━━━━━━
+-----------------------
 НАСТРАИВАЕТСЯ ВСЁ
-━━━━━━━━━━━━━━━━━━━━━━━
+-----------------------
 
 • Таймаут: любая длительность в минутах
 • Минимум вкладок: порог, ниже которого ничего не закрывается
@@ -181,9 +181,9 @@ Aging Tabs автоматически закрывает неактивные в
 • Белый список доменов
 • Браузерные уведомления с кликом для восстановления
 
-━━━━━━━━━━━━━━━━━━━━━━━
+-----------------------
 СНАЧАЛА ПРИВАТНОСТЬ
-━━━━━━━━━━━━━━━━━━━━━━━
+-----------------------
 
 • Данные не покидают браузер
 • Никакой аналитики, телеметрии, удалённых серверов
@@ -194,9 +194,9 @@ Aging Tabs автоматически закрывает неактивные в
 Политика конфиденциальности: https://github.com/ndokutovich/auto-close-tab-ext/blob/main/PRIVACY_POLICY.md
 Исходный код: https://github.com/ndokutovich/auto-close-tab-ext
 
-━━━━━━━━━━━━━━━━━━━━━━━
+-----------------------
 ЯЗЫКИ
-━━━━━━━━━━━━━━━━━━━━━━━
+-----------------------
 
 English, Русский
 ```
@@ -232,7 +232,8 @@ All at 1280×800, generated via `node scripts/screenshot-store.mjs`.
 ## Platform notes
 
 - Screenshots: 1280×800 minimum for Mac; existing store screenshots work.
-- Upload 1024×1024 PNG icon separately in App Store Connect (Xcode icon is for the app bundle).
+- Description here is sanitised for ASC — emoji and box-drawing characters rejected by the form are stripped. Chrome/Firefox listings keep the decorated version.
+- App icon is not uploaded in App Store Connect — it comes from Assets.xcassets/AppIcon.appiconset in the archive.
 - Fill App Review Information (demo account not needed — extension works without login).
 - Export compliance: declare 'does not use encryption' or 'uses exempt encryption' (HTTPS only).
 - Age rating: 4+ (no objectionable content).

@@ -63,7 +63,8 @@
     },
     "notes": [
       "Screenshots: 1280×800 minimum for Mac; existing store screenshots work.",
-      "Upload 1024×1024 PNG icon separately in App Store Connect (Xcode icon is for the app bundle).",
+      "Description here is sanitised for ASC — emoji and box-drawing characters rejected by the form are stripped. Chrome/Firefox listings keep the decorated version.",
+      "App icon is not uploaded in App Store Connect — it comes from Assets.xcassets/AppIcon.appiconset in the archive.",
       "Fill App Review Information (demo account not needed — extension works without login).",
       "Export compliance: declare 'does not use encryption' or 'uses exempt encryption' (HTTPS only).",
       "Age rating: 4+ (no objectionable content).",
