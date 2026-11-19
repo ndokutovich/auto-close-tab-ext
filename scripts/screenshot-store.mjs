@@ -5,9 +5,12 @@
  *   node scripts/screenshot-store.mjs              # English (default)
  *   node scripts/screenshot-store.mjs --locale=ru  # Russian
  *   node scripts/screenshot-store.mjs --all        # Both en + ru
+ *   node scripts/screenshot-store.mjs --all --scale=2   # 2560x1600 for the Mac App Store
  *
  * CWS requires screenshots at exactly 1280x800 or 640x400. We render the popup
  * centered on a branded gradient canvas and the options page cropped to 1280x800.
+ * The Mac App Store shows them on Retina displays, where 1x looks soft — --scale=2
+ * emits 2560x1600 into screenshots/store@2x/ and leaves the CWS set untouched.
  */
 
 import { chromium } from 'playwright';
@@ -128,7 +131,8 @@ async function shotPopup(context, extId, outDir, file, opts) {
 }
 
 async function generateForLocale(locale) {
-  const outDir = locale === 'en' ? STORE_DIR : resolve(STORE_DIR, locale);
+  const base = scale > 1 ? resolve(ROOT, `screenshots/store@${scale}x`) : STORE_DIR;
+  const outDir = locale === 'en' ? base : resolve(base, locale);
   mkdirSync(outDir, { recursive: true });
   const cap = CAPTIONS[locale];
 
@@ -145,6 +149,7 @@ async function generateForLocale(locale) {
       '--disable-default-apps',
     ],
     viewport: SHOT,
+    deviceScaleFactor: scale,
     colorScheme: 'dark',
   });
 
@@ -284,6 +289,8 @@ async function generateForLocale(locale) {
 const args = process.argv.slice(2);
 const doAll = args.includes('--all');
 const localeArg = args.find(a => a.startsWith('--locale='));
+const scaleArg = args.find(a => a.startsWith('--scale='));
+const scale = scaleArg ? Number(scaleArg.split('=')[1]) || 1 : 1;
 const locales = doAll
   ? ['en', 'ru']
   : localeArg
