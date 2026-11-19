@@ -1,5 +1,12 @@
 # Aging Tabs
 
+[![Chrome Web Store](https://img.shields.io/badge/Chrome_Web_Store-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/jhanbebmofgnbkhlehhddiegmpcgdaen)
+[![Firefox Add-ons](https://img.shields.io/badge/Firefox_Add--ons-FF7139?style=for-the-badge&logo=firefoxbrowser&logoColor=white)](https://addons.mozilla.org/firefox/addon/aging-tabs)
+[![Mac App Store](https://img.shields.io/badge/Mac_App_Store-000000?style=for-the-badge&logo=apple&logoColor=white)](https://apps.apple.com/app/id6762024091)
+[![MIT License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
+
+![Aging Tabs — tabs fade out before they close, a graveyard brings anything back](screenshots/store/promo/promo-1400x560.png)
+
 Browser extension that auto-closes inactive tabs with visual aging feedback. Inspired by the original Aging Tabs (Dao Gottwald, ~2008) that died with Firefox 57.
 
 ## The Problem
@@ -41,6 +48,12 @@ Growing tab count causes decision paralysis — you keep tabs open "just in case
 
 ## Install
 
+| Browser | Store |
+|---|---|
+| Chrome | https://chromewebstore.google.com/detail/jhanbebmofgnbkhlehhddiegmpcgdaen |
+| Firefox | https://addons.mozilla.org/firefox/addon/aging-tabs |
+| Safari (macOS) | https://apps.apple.com/app/id6762024091 |
+
 ### From source
 
 ```bash
@@ -56,9 +69,9 @@ npm run build
 
 ```bash
 npm run watch                        # auto-rebuild on changes
-npm test                             # run 104 unit + property-based tests
-npx vitest run --coverage            # coverage report (98.7% stmts)
-node scenarios/aging-tabs.spec.mjs   # run 19 e2e holdout scenarios
+npm test                             # run unit + property-based tests
+npx vitest run --coverage            # coverage report
+node scenarios/aging-tabs.spec.mjs   # run e2e holdout scenarios
 npm run package:firefox              # create .zip for AMO submission
 npm run package:chrome               # create .zip for Chrome Web Store
 npm run package:source               # create source .zip for AMO review
