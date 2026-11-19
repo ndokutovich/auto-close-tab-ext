@@ -20,7 +20,7 @@ const iconSvg = readFileSync(
   'utf-8'
 );
 
-function renderHtml({ width, height, titleSize, subtitleSize, iconSize }) {
+function renderHtml({ width, height, titleSize, subtitleSize, iconSize, pills }) {
   return `<!doctype html>
 <html><head><meta charset="utf-8"><style>
   html, body {
@@ -54,8 +54,8 @@ function renderHtml({ width, height, titleSize, subtitleSize, iconSize }) {
     font-size: ${titleSize}px;
     font-weight: 700;
     letter-spacing: -0.02em;
-    margin: 0 0 ${Math.round(titleSize * 0.18)}px 0;
-    line-height: 1.05;
+    margin: 0 0 ${Math.round(titleSize * 0.22)}px 0;
+    line-height: 1.18;
     background: linear-gradient(135deg, #f1f5f9 0%, #94a3b8 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -97,10 +97,7 @@ function renderHtml({ width, height, titleSize, subtitleSize, iconSize }) {
       <h1 class="title">Aging Tabs</h1>
       <p class="subtitle">Tabs fade out before they close. Graveyard brings anything back.</p>
       <div class="pills">
-        <span class="pill accent">Auto-close</span>
-        <span class="pill">Graveyard</span>
-        <span class="pill">Global pause</span>
-        <span class="pill">Privacy-first</span>
+${pills.map((p, i) => `        <span class="pill${i === 0 ? ' accent' : ''}">${p}</span>`).join('\n')}
       </div>
     </div>
   </div>
@@ -129,10 +126,10 @@ async function render(spec, filename) {
 }
 
 await render(
-  { width: 440, height: 280, titleSize: 44, subtitleSize: 17, iconSize: 104 },
+  { width: 440, height: 280, titleSize: 44, subtitleSize: 17, iconSize: 104, pills: ['Auto-close', 'Graveyard', 'Pause'] },
   'promo-440x280.png'
 );
 await render(
-  { width: 1400, height: 560, titleSize: 110, subtitleSize: 40, iconSize: 260 },
+  { width: 1400, height: 560, titleSize: 110, subtitleSize: 40, iconSize: 260, pills: ['Auto-close', 'Graveyard', 'Global pause', 'Privacy-first'] },
   'promo-1400x560.png'
 );
